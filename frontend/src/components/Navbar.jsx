@@ -1,17 +1,11 @@
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 
-function formatRoleLabel(role) {
-  if (!role) return ""
-  const s = String(role).toLowerCase()
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
 export default function Navbar({ userName, userRole, onLogout }) {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const roleLabel = formatRoleLabel(userRole)
-  const roleInitial = roleLabel ? roleLabel.charAt(0).toUpperCase() : "?"
+  const nameInitial = userName ? userName.charAt(0).toUpperCase() : "?"
+  const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : ""
 
   const handleLogout = async () => {
     await onLogout()
@@ -33,9 +27,12 @@ export default function Navbar({ userName, userRole, onLogout }) {
         <div className="hidden min-w-0 shrink-0 items-center gap-3 md:flex md:gap-4">
           <div className="flex items-center gap-3 border-r border-gray-200 pr-4 md:pr-6">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50">
-              <span className="text-sm font-bold text-indigo-700">{roleInitial}</span>
+              <span className="text-sm font-bold text-indigo-700">{nameInitial}</span>
             </div>
-            <span className="max-w-[200px] truncate text-base font-medium text-gray-600 lg:max-w-xs">{userName}</span>
+            <div className="flex flex-col">
+              <span className="max-w-[200px] truncate text-base font-medium text-gray-900 lg:max-w-xs">{userName}</span>
+              <span className="text-xs font-medium text-indigo-600">{roleLabel}</span>
+            </div>
           </div>
           <button
             type="button"
@@ -67,9 +64,12 @@ export default function Navbar({ userName, userRole, onLogout }) {
         <div className="border-t border-gray-100 px-2 py-4 pb-6 md:hidden">
           <div className="mx-2 mb-4 flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100">
-              <span className="text-sm font-bold text-indigo-700">{roleInitial}</span>
+              <span className="text-sm font-bold text-indigo-700">{nameInitial}</span>
             </div>
-            <span className="truncate font-semibold text-gray-900">{userName}</span>
+            <div className="flex flex-col">
+              <span className="truncate font-semibold text-gray-900">{userName}</span>
+              <span className="text-xs font-medium text-indigo-600">{roleLabel}</span>
+            </div>
           </div>
           <div className="px-2">
             <button

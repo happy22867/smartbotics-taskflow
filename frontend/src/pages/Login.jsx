@@ -13,12 +13,13 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
     try {
       const data = await loginUser(email, password)
 
       if (!data.user) {
-        throw new Error("Login failed")
+        throw new Error("Invalid email or password")
       }
 
       setAuthToken(data.session.access_token)
@@ -33,7 +34,9 @@ export default function Login() {
         throw new Error("Invalid role")
       }
     } catch (err) {
-      toast.error(err.message || "Login failed")
+      const errorMessage = err.message || "Login failed. Please check your credentials."
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -79,6 +82,12 @@ export default function Login() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-base"
               />
             </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm font-medium">{error}</p>
+              </div>
+            )}
 
             <button
               type="submit"
