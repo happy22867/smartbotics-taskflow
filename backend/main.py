@@ -9,7 +9,7 @@ app = FastAPI(title="Task Management API", version="1.0.0", redirect_slashes=Fal
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://smartbotics-taskflow-2tym.vercel.app", "https://smartbotics-taskflow-ik51.vercel.app", "https://smartbotics-taskflow-3.onrender.com"],  # Vite dev server + Vercel frontend + Backend self
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "https://smartbotics-taskflow-2tym.vercel.app", "https://smartbotics-taskflow-ik51.vercel.app", "https://smartbotics-taskflow-2mct.vercel.app", "https://smartbotics-taskflow-3.onrender.com"],  # Vite dev server + Vercel frontend + Backend self
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
