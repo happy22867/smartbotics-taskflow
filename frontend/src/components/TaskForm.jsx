@@ -36,13 +36,26 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
     e.preventDefault()
     setLoading(true)
 
+    // Validation
+    if (!title.trim()) {
+      toast.error("Please enter a task title")
+      setLoading(false)
+      return
+    }
+
+    if (!assignedTo) {
+      toast.error("Please select an employee to assign this task")
+      setLoading(false)
+      return
+    }
+
     try {
       if (editingTask) {
-        await updateTask(editingTask.id, title, description, assignedTo || null, editingTask.status)
+        await updateTask(editingTask.id, title, description, assignedTo, editingTask.status)
         toast.success("Task updated successfully!")
         onEditComplete()
       } else {
-        await createTask(title, description, assignedTo || null)
+        await createTask(title, description, assignedTo)
         toast.success("New task created!")
       }
       
@@ -85,14 +98,15 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
 
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
-              Assign To (Optional)
+              Assign To
             </label>
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
+              required
               className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-gray-900 appearance-none"
             >
-              <option value="">Select Employee (or assign later)</option>
+              <option value="">Select Employee</option>
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
                   {emp.name}

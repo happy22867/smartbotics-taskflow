@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import TaskList from "../components/TaskList"
 import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
+import TaskTable from "../components/TaskTable"
 import { getMyTasks, getAllTasks, getTaskHistory, getCurrentUser, clearAuthToken, completeTask, getEmployees } from "../api/client"
 
 export default function EmployeeDashboard() {
@@ -115,6 +115,17 @@ export default function EmployeeDashboard() {
       console.error("Error fetching history:", err)
     }
   }
+
+  // Set up global callbacks for table actions
+  useEffect(() => {
+    window.completeTaskCallback = (taskId) => {
+      completeTask(taskId).then(() => fetchTasks(userId)).catch(console.error)
+    }
+    
+    return () => {
+      delete window.completeTaskCallback
+    }
+  }, [userId])
 
   const todayDate = new Date().toDateString()
   const todayTasks = myTasks.filter((t) => new Date(t.created_at).toDateString() === todayDate)
@@ -316,27 +327,12 @@ export default function EmployeeDashboard() {
                 history.length === 0 ? (
                   <EmptyState title="No completed tasks" description="Tasks you complete will appear here" />
                 ) : (
-                  <div className="space-y-4">
-                    {history.map((h) => (
-                      <div key={h.id} className="bg-gray-50 border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-all duration-200">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-lg text-gray-900 mb-2">{h.task?.title}</h4>
-                            {h.task?.description && (
-                              <p className="text-base text-gray-600 mb-4 leading-relaxed">{h.task.description}</p>
-                            )}
-                            <div className="flex flex-wrap gap-6 text-sm text-gray-600">
-                              <span className="flex items-center gap-2">
-                                <span className="text-lg">✓</span>
-                                {new Date(h.completed_at).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                          <StatusBadge status="completed" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <TaskTable 
+                    tasks={history} 
+                    employeeNames={{}}
+                    showActions={false}
+                    isHistory={true}
+                  />
                 )
               ) : filteredTasks.length === 0 ? (
                 <EmptyState 
@@ -350,13 +346,18 @@ export default function EmployeeDashboard() {
                   }
                 />
               ) : (
-                <TaskList
-                  tasks={filteredTasks}
-                  onTaskUpdate={() => fetchTasks(userId)}
-                  onTaskDelete={() => fetchTasks(userId)}
-                  isEmployee={true}
-                  isOtherEmployeeTasks={view === "all-tasks"}
-                  hideCreatedDate={view === "my-tasks" && filter === "my-today"}
+                <TaskTable 
+                  tasks={filteredTasks} 
+                  employeeNames={{}}
+                  showActions={view === "my-tasks"}
+                  isHistory={false}
+                  isEmployeeView={true}
+                  onMarkComplete={(task) => {
+                    completeTask(task.id).then(() => {
+                      fetchTasks(userId)
+                      toast.success('Task marked as complete!')
+                    }).catch(console.error)
+                  }}
                 />
               )}
             </div>
