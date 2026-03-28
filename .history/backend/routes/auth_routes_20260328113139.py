@@ -5,83 +5,42 @@ from typing import Optional
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
-def _upsert_profile(user_id: str, email: str, name: str, role: str) -> None:
-    supabase.table("profiles").upsert(
-        {
-            "id": user_id,
-            "email": email,
-            "name": name,
-            "role": role,
-        },
-        on_conflict="id",
-    ).execute()
-
-
-def _is_email_already_registered_error(exc: Exception) -> bool:
-    s = str(exc).lower()
-    return (
-        "already registered" in s
-        or "already been registered" in s
-        or "user already registered" in s
-    )
-
-
 @router.post("/signup")
 async def signup(request: SignupRequest):
-    email = request.email
-    password = request.password
-    auth_response = None
-
     try:
-        auth_response = supabase.auth.sign_up(
-            {
-                "email": email,
-                "password": password,
-            }
-        )
+        # Sign up user with Supabase Auth
+        auth_response = supabase.auth.sign_up({
+            "email": request.email,
+            "password": request.password,
+        })
     except Exception as e:
-        if _is_email_already_registered_error(e):
-            try:
-                auth_response = supabase.auth.sign_in_with_password(
-                    {"email": email, "password": password}
-                )
-            except Exception:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "This email is already registered. "
-                        "Try logging in. To fully reset, delete the user under "
-                        "Supabase → Authentication → Users (clearing tables does not remove auth users)."
-                    ),
-                )
-        else:
-            raise HTTPException(status_code=400, detail=str(e))
-
-    # Some Supabase configs return no user on duplicate without raising — recover via sign-in
-    if not auth_response or not auth_response.user:
-        try:
-            auth_response = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password}
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=400,
-                detail="Signup failed. If the email exists, try logging in with the same password.",
-            )
+        raise HTTPException(status_code=400, detail=_signup_error_message(e))
 
     if not auth_response.user:
-        raise HTTPException(status_code=400, detail="Signup failed")
+        raise HTTPException(
+            status_code=400,
+            detail="Signup did not create a user. Check Supabase Auth settings (e.g. email confirmation) or try again.",
+        )
 
     try:
-        _upsert_profile(
-            auth_response.user.id,
-            email,
-            request.name,
-            request.role,
-        )
+        supabase.table("profiles").upsert(
+            {
+                "id": auth_response.user.id,
+                "email": email,
+                "name": request.name,
+                "role": request.role,
+            },
+            on_conflict="id",
+        ).execute()
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Auth account was created but saving your profile failed. "
+                "Try logging in with this email — if login works, you are registered. "
+                f"Details: {_signup_error_message(e)}"
+            ),
+        )
 
     return {
         "message": "Signup successful",

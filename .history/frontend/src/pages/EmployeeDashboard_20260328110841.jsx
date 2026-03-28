@@ -4,7 +4,7 @@ import TaskList from "../components/TaskList"
 import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
-import { getMyTasks, getAllTasks, getTaskHistory, getCurrentUser, clearAuthToken, completeTask, getEmployees } from "../api/client"
+import { getMyTasks, getAllTasks, getTaskHistory, getCurrentUser, clearAuthToken, completeTask } from "../api/client"
 
 export default function EmployeeDashboard() {
   const [myTasks, setMyTasks] = useState([])
@@ -19,8 +19,6 @@ export default function EmployeeDashboard() {
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState([])
   const [statsView, setStatsView] = useState("today")
-  const [selectedEmployee, setSelectedEmployee] = useState("all")
-  const [employees, setEmployees] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -30,13 +28,12 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     if (userId) {
       fetchHistory()
-      fetchEmployees()
     }
   }, [userId])
 
   useEffect(() => {
     applyFilter()
-  }, [myTasks, allTasks, filter, view, selectedEmployee])
+  }, [myTasks, allTasks, filter, view])
 
   const checkAuth = async () => {
     try {
@@ -69,15 +66,6 @@ export default function EmployeeDashboard() {
     }
   }
 
-  const fetchEmployees = async () => {
-    try {
-      const data = await getEmployees()
-      setEmployees(data.employees || [])
-    } catch (err) {
-      console.error("Error fetching employees:", err)
-    }
-  }
-
   const applyFilter = () => {
     let filtered = []
 
@@ -92,11 +80,6 @@ export default function EmployeeDashboard() {
       }
     } else {
       filtered = allTasks.filter((t) => t.assigned_to !== userId)
-      
-      // Apply employee filter for team tasks
-      if (selectedEmployee !== "all") {
-        filtered = filtered.filter((t) => t.assigned_to === selectedEmployee)
-      }
     }
 
     setFilteredTasks(filtered)
@@ -148,62 +131,59 @@ export default function EmployeeDashboard() {
 
       <main className="pt-32 pb-24">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-12 overflow-visible">
-            {/* bg-clip-text can clip descenders (e.g. "y"); extra leading + padding preserves tails */}
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.15] pb-1 text-transparent bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text mb-3">
-              My Tasks
-            </h2>
+          <div className="mb-12">
+            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4 tracking-tight">My Tasks</h2>
             <p className="text-xl text-gray-500 font-medium tracking-wide">Track and complete your assigned tasks</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">Task Overview</h3>
-              <p className="text-sm text-gray-500">Quick glance at your {statsView === "today" ? "today's metrics" : "all-time metrics"}</p>
+          {/* Stats: match manager main column width (narrower than full 1400px) */}
+          <div className="w-full max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Task Overview</h3>
+                <p className="text-sm text-gray-500">Quick glance at your {statsView === "today" ? "today's metrics" : "all-time metrics"}</p>
+              </div>
+              <div className="bg-gray-100 p-1.5 rounded-xl inline-flex items-center shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setStatsView("today")}
+                  className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
+                    statsView === "today"
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatsView("total")}
+                  className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
+                    statsView === "total"
+                      ? "bg-white text-indigo-700 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Total
+                </button>
+              </div>
             </div>
-            <div className="bg-gray-100 p-1.5 rounded-xl inline-flex items-center shadow-inner">
-              <button
-                type="button"
-                onClick={() => setStatsView("today")}
-                className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
-                  statsView === "today"
-                    ? "bg-white text-indigo-700 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatsView("total")}
-                className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
-                  statsView === "total"
-                    ? "bg-white text-indigo-700 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Total
-              </button>
-            </div>
-          </div>
 
-          {/* Same effective width as manager main column (sidebar ~w-72 + gap); page shell stays full width */}
-          <div className="w-full max-w-5xl mb-12">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-28 h-28 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                 <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Tasks</p>
-                <p className="text-5xl font-black text-gray-900 relative z-10 tabular-nums">{activeStats.total}</p>
+                <p className="text-4xl sm:text-5xl font-black text-gray-900 relative z-10">{activeStats.total}</p>
               </div>
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-28 h-28 bg-orange-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                 <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Pending</p>
-                <p className="text-5xl font-black text-orange-600 relative z-10 tabular-nums">{activeStats.pending}</p>
+                <p className="text-4xl sm:text-5xl font-black text-orange-600 relative z-10">{activeStats.pending}</p>
               </div>
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
                 <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Completed</p>
-                <p className="text-5xl font-black text-emerald-600 relative z-10 tabular-nums">{activeStats.completed}</p>
+                <p className="text-4xl sm:text-5xl font-black text-emerald-600 relative z-10">{activeStats.completed}</p>
               </div>
             </div>
           </div>
@@ -232,7 +212,6 @@ export default function EmployeeDashboard() {
                   onClick={() => {
                     setView("all-tasks")
                     setShowHistory(false)
-                    setSelectedEmployee("all")
                   }}
                   className={`py-5 text-sm font-bold border-b-2 transition-colors duration-200 whitespace-nowrap ${
                     view === "all-tasks" && !showHistory
@@ -289,25 +268,6 @@ export default function EmployeeDashboard() {
                     History
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Employee Filter for Team Tasks */}
-            {view === "all-tasks" && !showHistory && (
-              <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-8 py-4 flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-500 mr-2">Filter by Employee:</span>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                >
-                  <option value="all">All Team Members</option>
-                  {employees.filter(emp => emp.id !== userId).map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
 

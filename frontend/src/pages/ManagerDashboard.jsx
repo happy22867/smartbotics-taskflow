@@ -12,6 +12,7 @@ export default function ManagerDashboard() {
   const [employees, setEmployees] = useState([])
   const [employeeNames, setEmployeeNames] = useState({})
   const [userName, setUserName] = useState("")
+  const [userRole, setUserRole] = useState("")
   const [filter, setFilter] = useState("all")
   const [loading, setLoading] = useState(true)
   const [editingTask, setEditingTask] = useState(null)
@@ -19,6 +20,7 @@ export default function ManagerDashboard() {
   const [history, setHistory] = useState([])
   const [currentTab, setCurrentTab] = useState("manage")
   const [statsView, setStatsView] = useState("today")
+  const [selectedEmployee, setSelectedEmployee] = useState("all")
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function ManagerDashboard() {
         return
       }
       setUserName(user.name)
+      setUserRole(user.role || "")
     } catch (err) {
       navigate("/")
     }
@@ -121,6 +124,11 @@ export default function ManagerDashboard() {
       filtered = tasks.filter((t) => t.status === "completed")
     }
 
+    // Apply employee filter
+    if (selectedEmployee !== "all") {
+      filtered = filtered.filter((t) => t.assigned_to === selectedEmployee)
+    }
+
     return filtered
   }
 
@@ -142,6 +150,17 @@ export default function ManagerDashboard() {
     taskCount: tasks.filter(t => t.assigned_to === emp.id).length
   }))
 
+  const getFilteredHistory = () => {
+    let filtered = history
+    
+    // Apply employee filter
+    if (selectedEmployee !== "all") {
+      filtered = filtered.filter((h) => h.profile?.id === selectedEmployee)
+    }
+    
+    return filtered
+  }
+
   const getTaskTitle = () => {
     if (filter === "today") return "Today's Tasks"
     if (filter === "pending") return "Pending Tasks"
@@ -151,7 +170,7 @@ export default function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-gray-100">
-      <Navbar userName={userName} onLogout={handleLogout} />
+      <Navbar userName={userName} userRole={userRole} onLogout={handleLogout} />
 
       <main className="pt-32 pb-24">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -291,6 +310,7 @@ export default function ManagerDashboard() {
                           onClick={() => {
                             setFilter("all")
                             setShowHistory(false)
+                            setSelectedEmployee("all")
                           }}
                           className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
                             filter === "all" && !showHistory
@@ -304,6 +324,7 @@ export default function ManagerDashboard() {
                           onClick={() => {
                             setFilter("today")
                             setShowHistory(false)
+                            setSelectedEmployee("all")
                           }}
                           className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
                             filter === "today" && !showHistory
@@ -317,6 +338,7 @@ export default function ManagerDashboard() {
                           onClick={() => {
                             setFilter("pending")
                             setShowHistory(false)
+                            setSelectedEmployee("all")
                           }}
                           className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
                             filter === "pending" && !showHistory
@@ -330,6 +352,7 @@ export default function ManagerDashboard() {
                           onClick={() => {
                             setShowHistory(true)
                             fetchHistory()
+                            setSelectedEmployee("all")
                           }}
                           className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
                             showHistory
@@ -345,12 +368,29 @@ export default function ManagerDashboard() {
                     <div className="p-6 sm:p-8">
                       {showHistory ? (
                         <div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-6">Task History</h3>
-                          {history.length === 0 ? (
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">Task History</h3>
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-700">Filter by Employee:</label>
+                              <select
+                                value={selectedEmployee}
+                                onChange={(e) => setSelectedEmployee(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              >
+                                <option value="all">All Employees</option>
+                                {employees.map((emp) => (
+                                  <option key={emp.id} value={emp.id}>
+                                    {emp.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          {getFilteredHistory().length === 0 ? (
                             <EmptyState title="No completed tasks" description="Tasks completed by employees will appear here" />
                           ) : (
                             <div className="space-y-4">
-                              {history.map((h) => (
+                              {getFilteredHistory().map((h) => (
                                 <div key={h.id} className="bg-gray-50 border border-gray-100 rounded-xl p-5 hover:shadow-md transition-all duration-200">
                                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <div className="flex-1">
@@ -378,7 +418,24 @@ export default function ManagerDashboard() {
                         </div>
                       ) : filter === "today" || filter === "pending" ? (
                         <div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-6">{getTaskTitle()}</h3>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                            <h3 className="text-xl font-bold text-gray-900">{getTaskTitle()}</h3>
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-700">Filter by Employee:</label>
+                              <select
+                                value={selectedEmployee}
+                                onChange={(e) => setSelectedEmployee(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                              >
+                                <option value="all">All Employees</option>
+                                {employees.map((emp) => (
+                                  <option key={emp.id} value={emp.id}>
+                                    {emp.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                           {filteredTasks.length === 0 ? (
                             <EmptyState title={`No ${filter} tasks`} description={`No ${filter} tasks to display`} />
                           ) : (

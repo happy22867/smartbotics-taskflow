@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.auth_routes import router as auth_router
 from routes.task_routes import router as task_router
 
-app = FastAPI(title="Task Management API", version="1.0.0")
+# redirect_slashes=False avoids POST /auth/signup → redirect → GET (405 Method Not Allowed) in some clients
+app = FastAPI(title="Task Management API", version="1.0.0", redirect_slashes=False)
 
 # CORS middleware
 app.add_middleware(

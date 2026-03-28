@@ -1,9 +1,17 @@
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 
-export default function Navbar({ userName, onLogout }) {
+function formatRoleLabel(role) {
+  if (!role) return ""
+  const s = String(role).toLowerCase()
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+export default function Navbar({ userName, userRole, onLogout }) {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const roleLabel = formatRoleLabel(userRole)
+  const roleInitial = roleLabel ? roleLabel.charAt(0).toUpperCase() : "?"
 
   const handleLogout = async () => {
     await onLogout()
@@ -11,66 +19,69 @@ export default function Navbar({ userName, onLogout }) {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm z-50">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
-              <span className="text-white font-black text-xl">TF</span>
-            </div>
-            <h1 className="text-2xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">TaskFlow</h1>
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-100 bg-white/80 shadow-sm backdrop-blur-md">
+      <div className="flex h-20 w-full min-w-0 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 shrink items-center gap-3 sm:gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg shadow-indigo-200/50">
+            <span className="text-lg font-black tracking-tight text-white">TN</span>
           </div>
-          
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-3 pr-6 border-r border-gray-200">
-              <div className="w-9 h-9 bg-indigo-50 rounded-full flex items-center justify-center border border-indigo-100">
-                <span className="text-indigo-700 font-bold">{userName.charAt(0).toUpperCase()}</span>
-              </div>
-              <span className="text-base text-gray-600 font-medium">
-                {userName}
-              </span>
+          <h1 className="truncate text-2xl font-black tracking-tight text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text">
+            TaskNest
+          </h1>
+        </div>
+
+        <div className="hidden min-w-0 shrink-0 items-center gap-3 md:flex md:gap-4">
+          <div className="flex items-center gap-3 border-r border-gray-200 pr-4 md:pr-6">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50">
+              <span className="text-sm font-bold text-indigo-700">{roleInitial}</span>
             </div>
+            <span className="max-w-[200px] truncate text-base font-medium text-gray-600 lg:max-w-xs">{userName}</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="shrink-0 whitespace-nowrap rounded-xl border border-gray-200 bg-white px-5 py-2 text-sm font-bold text-gray-600 shadow-sm transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          >
+            Log Out
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          className="shrink-0 rounded-xl border border-gray-200 p-2 text-gray-600 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 md:hidden"
+          aria-expanded={mobileMenuOpen}
+          aria-label="Toggle menu"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {mobileMenuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {mobileMenuOpen && (
+        <div className="border-t border-gray-100 px-2 py-4 pb-6 md:hidden">
+          <div className="mx-2 mb-4 flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100">
+              <span className="text-sm font-bold text-indigo-700">{roleInitial}</span>
+            </div>
+            <span className="truncate font-semibold text-gray-900">{userName}</span>
+          </div>
+          <div className="px-2">
             <button
+              type="button"
               onClick={handleLogout}
-              className="px-5 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all duration-200 shadow-sm"
+              className="w-full rounded-xl border border-red-100 bg-red-50 px-6 py-3 text-base font-bold text-red-600 transition-colors hover:bg-red-100"
             >
               Log Out
             </button>
           </div>
-
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {mobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
         </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 py-4 pb-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="px-4 py-2 bg-gray-50 rounded-xl mx-2 flex items-center gap-3">
-              <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                <span className="text-indigo-700 font-bold">{userName.charAt(0).toUpperCase()}</span>
-              </div>
-              <span className="font-semibold text-gray-900">{userName}</span>
-            </div>
-            <div className="px-2">
-              <button
-                onClick={handleLogout}
-                className="w-full px-6 py-3 text-base font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors"
-              >
-                Log Out
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </nav>
   )
 }
