@@ -21,6 +21,7 @@ export default function EmployeeDashboard() {
   const [statsView, setStatsView] = useState("today")
   const [selectedEmployee, setSelectedEmployee] = useState("all")
   const [employees, setEmployees] = useState([])
+  const [employeeNames, setEmployeeNames] = useState({})
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -73,6 +74,13 @@ export default function EmployeeDashboard() {
     try {
       const data = await getEmployees()
       setEmployees(data.employees || [])
+      
+      // Create employee names mapping
+      const names = {}
+      data.employees.forEach(emp => {
+        names[emp.id] = emp.name
+      })
+      setEmployeeNames(names)
     } catch (err) {
       console.error("Error fetching employees:", err)
     }
@@ -91,7 +99,25 @@ export default function EmployeeDashboard() {
         filtered = myTasks.filter((t) => new Date(t.created_at).toDateString() === todayStr)
       }
     } else {
-      filtered = allTasks.filter((t) => t.assigned_to !== userId)
+      // Team Tasks filters
+      if (filter === "team-today") {
+        // Team Tasks - show only today's tasks for other employees
+        const todayStr = new Date().toDateString()
+        filtered = allTasks.filter((t) => 
+          t.assigned_to !== userId && 
+          new Date(t.created_at).toDateString() === todayStr
+        )
+      } else if (filter === "team-total") {
+        // Team Tasks - show all tasks for other employees
+        filtered = allTasks.filter((t) => t.assigned_to !== userId)
+      } else {
+        // Default to today's tasks for backward compatibility
+        const todayStr = new Date().toDateString()
+        filtered = allTasks.filter((t) => 
+          t.assigned_to !== userId && 
+          new Date(t.created_at).toDateString() === todayStr
+        )
+      }
       
       // Apply employee filter for team tasks
       if (selectedEmployee !== "all") {
@@ -110,7 +136,9 @@ export default function EmployeeDashboard() {
   const fetchHistory = async () => {
     try {
       const data = await getTaskHistory()
-      setHistory(data.history || [])
+      // Filter history to show only current user's tasks
+      const userHistory = (data.history || []).filter(h => h.profile?.id === userId)
+      setHistory(userHistory)
     } catch (err) {
       console.error("Error fetching history:", err)
     }
@@ -244,6 +272,7 @@ export default function EmployeeDashboard() {
                     setView("all-tasks")
                     setShowHistory(false)
                     setSelectedEmployee("all")
+                    setFilter("team-today")
                   }}
                   className={`py-5 text-sm font-bold border-b-2 transition-colors duration-200 whitespace-nowrap ${
                     view === "all-tasks" && !showHistory
@@ -305,20 +334,50 @@ export default function EmployeeDashboard() {
 
             {/* Employee Filter for Team Tasks */}
             {view === "all-tasks" && !showHistory && (
-              <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-8 py-4 flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-500 mr-2">Filter by Employee:</span>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                >
-                  <option value="all">All Team Members</option>
-                  {employees.filter(emp => emp.id !== userId).map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-8 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-500 mr-2">Filter by Employee:</span>
+                    <select
+                      value={selectedEmployee}
+                      onChange={(e) => setSelectedEmployee(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                    >
+                      <option value="all">All Team Members</option>
+                      {employees.filter(emp => emp.id !== userId).map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-500 mr-2">Time Period:</span>
+                    <div className="bg-gray-200/50 p-1 rounded-lg inline-flex">
+                      <button
+                        type="button"
+                        onClick={() => setFilter("team-today")}
+                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                          filter === "team-today"
+                            ? "bg-white text-indigo-700 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => setFilter("team-total")}
+                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                          filter === "team-total"
+                            ? "bg-white text-indigo-700 shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Total
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -332,6 +391,7 @@ export default function EmployeeDashboard() {
                     employeeNames={{}}
                     showActions={false}
                     isHistory={true}
+                    showEmployeeColumn={false}
                   />
                 )
               ) : filteredTasks.length === 0 ? (
@@ -348,10 +408,11 @@ export default function EmployeeDashboard() {
               ) : (
                 <TaskTable 
                   tasks={filteredTasks} 
-                  employeeNames={{}}
+                  employeeNames={employeeNames}
                   showActions={view === "my-tasks"}
                   isHistory={false}
                   isEmployeeView={true}
+                  showEmployeeColumn={view === "all-tasks"}
                   onMarkComplete={(task) => {
                     completeTask(task.id).then(() => {
                       fetchTasks(userId)

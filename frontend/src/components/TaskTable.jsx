@@ -52,7 +52,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Title</th>
             <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Description</th>
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">User</th>
+            {showEmployeeColumn && <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">User</th>}
             <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Date</th>
             <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Time</th>
             <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Status</th>
@@ -83,11 +83,13 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     {truncateText(taskData?.description, 40)}
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-900">
-                    {userName}
-                  </div>
-                </td>
+                {showEmployeeColumn && (
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-gray-900">
+                      {userName}
+                    </div>
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="text-sm text-gray-600">
                     {formatDate(dateToShow)}
