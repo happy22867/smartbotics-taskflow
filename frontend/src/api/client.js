@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://smartbotics-taskflow-2.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://smartbotics-taskflow-3.onrender.com";
 
 let authToken = localStorage.getItem("authToken");
 
