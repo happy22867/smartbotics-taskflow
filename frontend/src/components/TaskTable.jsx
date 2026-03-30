@@ -87,12 +87,10 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                 ? employeeNames[task.assigned_to] || "Loading..." 
                 : "Unassigned"
             
-            // Time logic: Show creation time for pending tasks, completion/update time for completed tasks
+            // Time logic: Show creation/update time for pending tasks, completion/update time for completed tasks
             const dateToShow = isHistory 
               ? task.completed_at 
-              : (taskData?.status === 'completed' || task.status === 'completed')
-                ? (taskData?.updated_at || task.updated_at || taskData?.completed_at || task.completed_at || taskData?.created_at || task.created_at)
-                : (taskData?.created_at || task.created_at)
+              : (taskData?.updated_at || task.updated_at || taskData?.completed_at || task.completed_at || taskData?.created_at || task.created_at)
             
             return (
               <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
