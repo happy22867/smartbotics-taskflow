@@ -30,7 +30,7 @@ async def create_task(request: TaskCreateRequest, authorization: Optional[str] =
             "assigned_to": request.assigned_to or None,
             "created_by": user.id,
             "status": "pending",
-            "updated_at": datetime.now().astimezone().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         }
         
         response = supabase.table("tasks").insert(task_data).execute()
@@ -76,14 +76,14 @@ async def complete_task(task_id: str, request: TaskCompleteRequest, authorizatio
         # Update task status
         update_response = supabase.table("tasks").update({
             "status": request.status,
-            "updated_at": datetime.now().astimezone().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         }).eq("id", task_id).execute()
         
         # Record in task history
         history_data = {
             "task_id": task_id,
             "completed_by": user.id,
-            "completed_at": datetime.now().astimezone().isoformat(),
+            "completed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         }
         
         history_response = supabase.table("task_history").insert(history_data).execute()

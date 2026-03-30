@@ -38,15 +38,29 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
     setTaskToDelete(null)
   }
 
+  const parseDate = (dateString) => {
+    if (!dateString) return null
+    // If string lacks timezone info (Z or +/-), assume UTC for consistency with server data
+    let str = dateString
+    if (str && !str.includes('Z') && !str.includes('+') && str.includes('T')) {
+      str += 'Z'
+    }
+    return new Date(str)
+  }
+
   const formatDate = (dateString) => {
-    if (!dateString) return "N/A"
-    const date = new Date(dateString)
-    return date.toLocaleDateString()
+    const date = parseDate(dateString)
+    if (!date || isNaN(date)) return "N/A"
+    return date.toLocaleDateString([], { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    })
   }
 
   const formatTime = (dateString) => {
-    if (!dateString) return "N/A"
-    const date = new Date(dateString)
+    const date = parseDate(dateString)
+    if (!date || isNaN(date)) return "N/A"
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
