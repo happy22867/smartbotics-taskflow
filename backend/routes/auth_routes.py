@@ -118,7 +118,16 @@ async def login(request: LoginRequest):
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Login failed")
+        # Return specific error messages
+        error_message = str(e)
+        if "Invalid login credentials" in error_message:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        elif "Email not confirmed" in error_message:
+            raise HTTPException(status_code=401, detail="Please confirm your email address")
+        elif "User not found" in error_message:
+            raise HTTPException(status_code=401, detail="User not found")
+        else:
+            raise HTTPException(status_code=401, detail=error_message)
 
 @router.get("/me")
 async def get_current_user(authorization: Optional[str] = Header(None)):

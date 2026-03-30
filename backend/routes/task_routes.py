@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Header
 from models.schemas import TaskCreateRequest, TaskUpdateRequest, TaskCompleteRequest
 from supabase_client import supabase
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -30,6 +30,7 @@ async def create_task(request: TaskCreateRequest, authorization: Optional[str] =
             "assigned_to": request.assigned_to or None,
             "created_by": user.id,
             "status": "pending",
+            "updated_at": datetime.now().astimezone().isoformat(),
         }
         
         response = supabase.table("tasks").insert(task_data).execute()
@@ -74,21 +75,23 @@ async def complete_task(task_id: str, request: TaskCompleteRequest, authorizatio
         
         # Update task status
         update_response = supabase.table("tasks").update({
-            "status": request.status
+            "status": request.status,
+            "updated_at": datetime.now().astimezone().isoformat()
         }).eq("id", task_id).execute()
         
         # Record in task history
         history_data = {
             "task_id": task_id,
             "completed_by": user.id,
-            "completed_at": datetime.utcnow().isoformat(),
+            "completed_at": datetime.now().astimezone().isoformat(),
         }
         
-        supabase.table("task_history").insert(history_data).execute()
+        history_response = supabase.table("task_history").insert(history_data).execute()
         
         return {
             "message": "Task completed successfully",
-            "task": update_response.data[0] if update_response.data else {}
+            "task": update_response.data[0] if update_response.data else {},
+            "completed_at": history_data["completed_at"]
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -146,6 +149,10 @@ async def update_task(task_id: str, request: TaskUpdateRequest, authorization: O
             update_data["assigned_to"] = request.assigned_to or None
         if request.status:
             update_data["status"] = request.status
+        
+        # Add updated_at timestamp when task is modified
+        if update_data:
+            update_data["updated_at"] = datetime.now().astimezone().isoformat()
         
         response = supabase.table("tasks").update(update_data).eq("id", task_id).execute()
         

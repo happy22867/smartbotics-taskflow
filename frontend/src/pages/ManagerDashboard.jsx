@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import TaskForm from "../components/TaskForm"
 import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
 import TaskTable from "../components/TaskTable"
-import { getAllTasks, getTaskHistory, updateTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees } from "../api/client"
+import { getAllTasks, getTaskHistory, updateTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees, createTask } from "../api/client"
+import toast from "react-hot-toast"
 
 export default function ManagerDashboard() {
   const [tasks, setTasks] = useState([])
@@ -14,14 +15,19 @@ export default function ManagerDashboard() {
   const [userName, setUserName] = useState("")
   const [userRole, setUserRole] = useState("")
   const [filter, setFilter] = useState("today")
-  const [loading, setLoading] = useState(true)
+  const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [newTaskDescription, setNewTaskDescription] = useState("")
+  const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("")
+  const [showAddForm, setShowAddForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState([])
   const [currentTab, setCurrentTab] = useState("manage")
   const [statsView, setStatsView] = useState("today")
   const [selectedEmployee, setSelectedEmployee] = useState("all")
   const navigate = useNavigate()
+  const formRef = useRef(null)
 
   useEffect(() => {
     checkAuth()
@@ -55,7 +61,7 @@ export default function ManagerDashboard() {
     window.deleteTaskCallback = (taskId) => {
       if(window.confirm("Delete this task?")) {
         deleteTask(taskId).then(() => {
-          fetchTasks()
+          refreshData(false)
           toast.success('Task deleted successfully!')
         }).catch(console.error)
       }
@@ -81,16 +87,24 @@ export default function ManagerDashboard() {
     }
   }
 
-  const fetchTasks = async () => {
-    setLoading(true)
+  const refreshData = async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
-      const data = await getAllTasks()
-      setTasks(data.tasks || [])
+      const [tasksData, historyData] = await Promise.all([
+        getAllTasks(),
+        getTaskHistory()
+      ])
+      setTasks(tasksData.tasks || [])
+      setHistory(historyData.history || [])
     } catch (err) {
-      console.error("Error fetching tasks:", err)
+      console.error("Error refreshing data:", err)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
+  }
+
+  const fetchTasks = async () => {
+    refreshData(true)
   }
 
   const fetchEmployees = async () => {
@@ -99,6 +113,49 @@ export default function ManagerDashboard() {
       setEmployees(data.employees || [])
     } catch (err) {
       console.error("Error fetching employees:", err)
+    }
+  }
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim() || !newTaskAssignedTo) {
+      toast.error("Please fill in title and assign to someone")
+      return
+    }
+    
+    try {
+      await createTask(newTaskTitle, newTaskDescription, newTaskAssignedTo)
+      toast.success("Task created successfully!")
+      setNewTaskTitle("")
+      setNewTaskDescription("")
+      setNewTaskAssignedTo("")
+      setShowAddForm(false)
+      fetchHistory()
+      refreshData(false)
+    } catch (err) {
+      console.error("Error:", err)
+      toast.error(err.message || "Failed to create task")
+    }
+  }
+
+  const handleEditTask = async () => {
+    if (!newTaskTitle.trim() || !newTaskAssignedTo) {
+      toast.error("Please fill in title and assign to someone")
+      return
+    }
+    
+    try {
+      await updateTask(editingTask.id, newTaskTitle, newTaskDescription, newTaskAssignedTo)
+      toast.success("Task updated successfully!")
+      setNewTaskTitle("")
+      setNewTaskDescription("")
+      setNewTaskAssignedTo("")
+      setEditingTask(null)
+      setShowAddForm(false)
+      fetchHistory()
+      refreshData(false)
+    } catch (err) {
+      console.error("Error:", err)
+      toast.error(err.message || "Failed to update task")
     }
   }
 
@@ -134,13 +191,26 @@ export default function ManagerDashboard() {
   }
 
   const getFilteredTasks = () => {
-    let filtered = tasks
+    let filtered = []
 
     if (filter === "today") {
-      const today = new Date().toDateString()
-      filtered = tasks.filter(
-        (t) => new Date(t.created_at).toDateString() === today
+      const todayStr = new Date().toDateString()
+      // For today's tasks, include both pending tasks and completed tasks with history
+      const todayPendingTasks = tasks.filter((t) => 
+        t.status === "pending" && new Date(t.created_at).toDateString() === todayStr
       )
+      
+      // Get completed tasks from history for today and map to task structure
+      const todayCompletedTasks = history.filter((h) => 
+        new Date(h.completed_at).toDateString() === todayStr
+      ).map(h => ({
+        ...h.task,
+        completed_at: h.completed_at,
+        status: 'completed',
+        assigned_to: h.task?.assigned_to
+      }))
+      
+      filtered = [...todayPendingTasks, ...todayCompletedTasks]
     } else if (filter === "pending") {
       filtered = tasks.filter((t) => t.status === "pending")
     } else if (filter === "completed") {
@@ -197,63 +267,15 @@ export default function ManagerDashboard() {
 
       <main className="pt-32 pb-24">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-12">
-            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-4 tracking-tight">Dashboard</h2>
-            <p className="text-xl text-gray-500 font-medium tracking-wide">Manage tasks and track employee progress</p>
+          <div className="mb-6">
+            <h2 className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2">Dashboard</h2>
+            <p className="text-lg text-gray-500 font-medium tracking-wide">Manage tasks and track employee progress</p>
           </div>
 
           <div className="flex flex-col gap-10">
             {/* Main Content Area */}
             <div className="w-full">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  {/* Stats Grid Header & Toggle */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">Task Overview</h3>
-                      <p className="text-sm text-gray-500">Quick glance at {statsView === "today" ? "today's metrics" : "all-time metrics"}</p>
-                    </div>
-                    <div className="bg-gray-100 p-1.5 rounded-xl flex items-center shadow-inner inline-flex">
-                      <button
-                        onClick={() => setStatsView("today")}
-                        className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
-                          statsView === "today"
-                            ? "bg-white text-indigo-700 shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
-                      >
-                        Today
-                      </button>
-                      <button
-                        onClick={() => setStatsView("total")}
-                        className={`px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
-                          statsView === "total"
-                            ? "bg-white text-indigo-700 shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
-                      >
-                        Total
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
-                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                      <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Tasks</p>
-                      <p className="text-5xl font-black text-gray-900 relative z-10">{activeStats.total}</p>
-                    </div>
-                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                      <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Pending</p>
-                      <p className="text-5xl font-black text-orange-600 relative z-10">{activeStats.pending}</p>
-                    </div>
-                    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 transform transition-all duration-300 hover:scale[1.02] hover:shadow-2xl relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-                      <p className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-3 relative z-10">{activeStats.label} Completed</p>
-                      <p className="text-5xl font-black text-emerald-600 relative z-10">{activeStats.completed}</p>
-                    </div>
-                  </div>
                   {/* Tasks Container */}
                   <div className="bg-white rounded-2xl shadow-md border border-gray-100">
                     <div className="border-b border-gray-100 p-6 sm:p-8">
@@ -338,21 +360,7 @@ export default function ManagerDashboard() {
                       ) : filter === "today" || filter === "pending" ? (
                         <div>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                            <div className="flex items-center gap-4">
-                              <h3 className="text-xl font-bold text-gray-900">{getTaskTitle()}</h3>
-                              <button
-                                onClick={() => {
-                                  setEditingTask(null)
-                                  setCurrentTab("create")
-                                }}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                Add Task
-                              </button>
-                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">{getTaskTitle()}</h3>
                             <div className="flex items-center gap-3">
                               <label className="text-sm font-medium text-gray-700">Filter by Employee:</label>
                               <select
@@ -379,12 +387,39 @@ export default function ManagerDashboard() {
                               isHistory={false}
                               onEdit={(task) => {
                                 setEditingTask(task)
-                                setCurrentTab("create")
-                                window.scrollTo({ top: 0, behavior: "smooth" })
+                                setNewTaskTitle(task.title)
+                                setNewTaskDescription(task.description || "")
+                                setNewTaskAssignedTo(task.assigned_to)
+                                setShowAddForm(true)
+                                // Scroll to form after a short delay to ensure it's rendered
+                                setTimeout(() => {
+                                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                }, 100)
+                              }}
+                              onMarkComplete={(task) => {
+                                console.log('Completing task:', task.id)
+                                completeTask(task.id).then((response) => {
+                                  console.log('Complete response:', response)
+                                  const completionTime = response.completed_at || new Date().toISOString()
+                                  
+                                  // Update tasks with completion time
+                                  setTasks(prevTasks => 
+                                    prevTasks.map(t => 
+                                      t.id === task.id 
+                                        ? { ...t, status: 'completed', completed_at: completionTime }
+                                        : t
+                                    )
+                                  )
+                                  refreshData(false)
+                                  toast.success('Task marked as complete!')
+                                }).catch((err) => {
+                                  console.error('Complete task error:', err)
+                                  toast.error('Failed to complete task')
+                                })
                               }}
                               onDelete={(taskId) => {
                                 deleteTask(taskId).then(() => {
-                                  fetchTasks()
+                                  refreshData(false)
                                   toast.success('Task deleted successfully!')
                                 }).catch(console.error)
                               }}
@@ -393,58 +428,79 @@ export default function ManagerDashboard() {
                         </div>
                       ) : null}
                     </div>
+                    {/* Add Task Button at End */}
+                    {!showHistory && (
+                      <div className="mt-6 pl-4 pb-6">
+                        {!showAddForm && (filter === "today" || filter === "pending") ? (
+                          <div className="flex justify-start">
+                            <button
+                              onClick={() => setShowAddForm(true)}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                              </svg>
+                              Add Task
+                            </button>
+                          </div>
+                        ) : showAddForm ? (
+                          <div ref={formRef} className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <input
+                                type="text"
+                                placeholder="Task Title"
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Task Description"
+                                value={newTaskDescription}
+                                onChange={(e) => setNewTaskDescription(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                              <select
+                                value={newTaskAssignedTo}
+                                onChange={(e) => setNewTaskAssignedTo(e.target.value)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              >
+                                <option value="">Select Employee</option>
+                                {employees.map((emp) => (
+                                  <option key={emp.id} value={emp.id}>
+                                    {emp.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex justify-end gap-3 mt-4">
+                              <button
+                                onClick={() => {
+                                  setShowAddForm(false)
+                                  setNewTaskTitle("")
+                                  setNewTaskDescription("")
+                                  setNewTaskAssignedTo("")
+                                  setEditingTask(null)
+                                }}
+                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={editingTask ? handleEditTask : handleAddTask}
+                                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                              >
+                                {editingTask ? 'Update Task' : 'Add Task'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 </div>
             </div>
 
-            {/* Task Form Modal */}
-            {currentTab === "create" && (
-              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-3xl shadow-2xl border border-gray-100/50 p-0 max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  {/* Modal Header */}
-                  <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-8 py-6 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-2xl font-bold text-white mb-1">
-                          {editingTask ? "Edit Task" : "Create New Task"}
-                        </h2>
-                        <p className="text-indigo-100 text-sm">
-                          {editingTask ? "Update the task details below" : "Fill in the details to create a new task"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setCurrentTab("manage")
-                          setEditingTask(null)
-                        }}
-                        className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Modal Body */}
-                  <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)]">
-                    <TaskForm
-                      onTaskCreated={() => {
-                        setCurrentTab("manage")
-                        setEditingTask(null)
-                        fetchTasks()
-                      }}
-                      editingTask={editingTask}
-                      onEditComplete={() => {
-                        setCurrentTab("manage")
-                        setEditingTask(null)
-                        fetchTasks()
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

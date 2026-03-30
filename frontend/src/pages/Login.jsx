@@ -34,7 +34,28 @@ export default function Login() {
         throw new Error("Invalid role")
       }
     } catch (err) {
-      const errorMessage = err.message || "Login failed. Please check your credentials."
+      let errorMessage = "Login failed"
+      
+      if (err.message === "Failed to fetch") {
+        errorMessage = "Network error. Please check your connection."
+      } else if (err.message && err.message.includes("Invalid login credentials")) {
+        errorMessage = "Invalid email or password"
+      } else if (err.message && err.message.includes("Invalid email or password")) {
+        errorMessage = "Invalid email or password"
+      } else if (err.message && err.message.includes("Invalid role")) {
+        errorMessage = "Invalid user role"
+      } else if (err.message && err.message.includes("Please confirm your email address")) {
+        errorMessage = "Please confirm your email address"
+      } else if (err.message && err.message.includes("User not found")) {
+        errorMessage = "User not found"
+      } else if (err.message) {
+        errorMessage = err.message
+      } else if (err.detail) {
+        errorMessage = err.detail
+      } else {
+        errorMessage = "An unexpected error occurred. Please try again."
+      }
+      
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {

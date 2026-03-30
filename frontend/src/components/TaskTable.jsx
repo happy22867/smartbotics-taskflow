@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { FaTrash, FaCheckCircle } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import StatusBadge from "./StatusBadge"
 
 export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, employeeNames, showActions = true, showEmployeeColumn = true, isHistory = false, isEmployeeView = false }) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState(null)
+
   const handleMarkComplete = (task) => {
     if (onMarkComplete) {
       onMarkComplete(task)
@@ -12,12 +15,27 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
   }
 
   const handleDelete = (task) => {
-    if (onDelete) {
-      if (window.confirm('Are you sure you want to delete this task?')) {
-        onDelete(task.id)
-        toast.success('Task deleted successfully!')
-      }
+    setTaskToDelete(task)
+    setShowConfirmDialog(true)
+  }
+
+  const confirmDelete = () => {
+    if (onDelete && taskToDelete) {
+      // Immediate feedback - no waiting
+      const taskId = taskToDelete.id
+      
+      // Close dialog immediately
+      setShowConfirmDialog(false)
+      setTaskToDelete(null)
+      
+      // Delete in background (toast will be shown by parent)
+      onDelete(taskId)
     }
+  }
+
+  const cancelDelete = () => {
+    setShowConfirmDialog(false)
+    setTaskToDelete(null)
   }
 
   const formatDate = (dateString) => {
@@ -39,8 +57,8 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
 
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <p>No tasks found</p>
+      <div className="text-center py-4 text-gray-500">
+        <p className="text-sm">No tasks found</p>
       </div>
     )
   }
@@ -69,7 +87,12 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                 ? employeeNames[task.assigned_to] || "Loading..." 
                 : "Unassigned"
             
-            const dateToShow = isHistory ? task.completed_at : taskData?.created_at
+            // Time logic: Show creation time for pending tasks, completion/update time for completed tasks
+            const dateToShow = isHistory 
+              ? task.completed_at 
+              : (taskData?.status === 'completed' || task.status === 'completed')
+                ? (taskData?.updated_at || task.updated_at || taskData?.completed_at || task.completed_at || taskData?.created_at || task.created_at)
+                : (taskData?.created_at || task.created_at)
             
             return (
               <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -120,7 +143,12 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                         <>
                           <button
                             onClick={() => onEdit && onEdit(task)}
-                            className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
+                            disabled={taskData?.status === 'completed'}
+                            className={`text-sm font-semibold px-2 py-1 rounded transition-colors ${
+                              (taskData?.status === 'completed' || task.status === 'completed') 
+                                ? 'text-gray-500 cursor-not-allowed' 
+                                : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                            }`}
                           >
                             Edit
                           </button>
@@ -140,6 +168,37 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
           })}
         </tbody>
       </table>
+      
+      {/* Custom Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <FaTrash className="text-red-600 text-xl" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Delete Task</h3>
+                <p className="text-sm text-gray-600">Are you sure you want to delete this task?</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
