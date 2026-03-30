@@ -102,17 +102,17 @@ export default function EmployeeDashboard() {
 
     if (view === "my-tasks") {
       if (filter === "my-pending") {
-        filtered = myTasks.filter((t) => t.status === "pending")
+        filtered = myTasks.filter((t) => t.status === "pending" || t.status === "new")
       } else if (filter === "my-completed") {
         filtered = myTasks.filter((t) => t.status === "completed")
       } else if (filter === "my-today") {
         const todayStr = new Date().toDateString()
         // For today's tasks, include both pending tasks and completed tasks with history
         const todayPendingTasks = myTasks.filter((t) => 
-          t.status === "pending" && new Date(t.created_at).toDateString() === todayStr
+          (t.status === "pending" || t.status === "new") && new Date(t.created_at).toDateString() === todayStr
         )
         
-        // Get completed tasks from history for today and map to task structure
+        // Get ANY completed tasks from history for today (even if created earlier)
         const todayCompletedTasks = history.filter((h) => 
           new Date(h.completed_at).toDateString() === todayStr
         ).map(h => ({

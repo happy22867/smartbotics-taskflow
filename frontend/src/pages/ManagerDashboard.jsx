@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
 import TaskTable from "../components/TaskTable"
-import { getAllTasks, getTaskHistory, updateTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees, createTask } from "../api/client"
+import { getAllTasks, getTaskHistory, updateTask, completeTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees, createTask } from "../api/client"
 import toast from "react-hot-toast"
 
 export default function ManagerDashboard() {
@@ -52,10 +52,44 @@ export default function ManagerDashboard() {
 
   // Set up global callbacks for table actions
   useEffect(() => {
-    window.editTaskCallback = (task) => {
-      setEditingTask(task)
-      setCurrentTab("create")
-      window.scrollTo({ top: 0, behavior: "smooth" })
+    window.editTaskCallback = (task, isInline = false) => {
+      if (isInline) {
+        // Handle direct inline update or status toggle
+        console.log("Attempting update for task:", task.id, { title: task.title, desc: task.description, assigned: task.assigned_to, status: task.status })
+        
+        // Special case: If status is being marked as completed by manager, use completion API to sync history
+        if (task.status === 'completed') {
+          completeTask(task.id)
+            .then(() => {
+              refreshData(false)
+              toast.success("Task marked as completed!")
+            })
+            .catch((err) => {
+              console.error("Status update error:", err)
+              toast.error(err.message || "Failed to complete task")
+            })
+          return
+        }
+
+        updateTask(task.id, task.title, task.description, task.assigned_to, task.status)
+          .then(() => {
+            console.log("Update success")
+            refreshData(false)
+            toast.success("Task updated successfully!")
+          })
+          .catch((err) => {
+            console.error("Update error:", err)
+            toast.error(err.message || "Failed to update task")
+          })
+      } else {
+        // Fallback or legacy behavior: Scroll to form
+        setEditingTask(task)
+        setNewTaskTitle(task.title || "")
+        setNewTaskDescription(task.description || "")
+        setNewTaskAssignedTo(task.assigned_to || "")
+        setCurrentTab("create")
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      }
     }
     
     window.deleteTaskCallback = (taskId) => {
@@ -185,7 +219,7 @@ export default function ManagerDashboard() {
   } : {
     label: "Total",
     total: tasks.length,
-    pending: tasks.filter((t) => t.status === "pending").length,
+    pending: tasks.filter((t) => t.status === "pending" || t.status === "new").length,
     completed: tasks.filter((t) => t.status === "completed").length,
     employees: employees.length,
   }
@@ -197,10 +231,10 @@ export default function ManagerDashboard() {
       const todayStr = new Date().toDateString()
       // For today's tasks, include both pending tasks and completed tasks with history
       const todayPendingTasks = tasks.filter((t) => 
-        t.status === "pending" && new Date(t.created_at).toDateString() === todayStr
+        (t.status === "pending" || t.status === "new") && new Date(t.created_at).toDateString() === todayStr
       )
       
-      // Get completed tasks from history for today and map to task structure
+      // Get ANY completed tasks from history for today (even if created earlier)
       const todayCompletedTasks = history.filter((h) => 
         new Date(h.completed_at).toDateString() === todayStr
       ).map(h => ({
@@ -212,7 +246,7 @@ export default function ManagerDashboard() {
       
       filtered = [...todayPendingTasks, ...todayCompletedTasks]
     } else if (filter === "pending") {
-      filtered = tasks.filter((t) => t.status === "pending")
+      filtered = tasks.filter((t) => t.status === "pending" || t.status === "new")
     } else if (filter === "completed") {
       filtered = tasks.filter((t) => t.status === "completed")
     }
@@ -351,6 +385,7 @@ export default function ManagerDashboard() {
                           ) : (
                             <TaskTable 
                               tasks={getFilteredHistory()} 
+                              employees={employees}
                               employeeNames={employeeNames}
                               showActions={false}
                               isHistory={true}
@@ -382,34 +417,14 @@ export default function ManagerDashboard() {
                           ) : (
                             <TaskTable 
                               tasks={filteredTasks} 
+                              employees={employees}
                               employeeNames={employeeNames}
                               showActions={true}
                               isHistory={false}
-                              onEdit={(task) => {
-                                setEditingTask(task)
-                                setNewTaskTitle(task.title)
-                                setNewTaskDescription(task.description || "")
-                                setNewTaskAssignedTo(task.assigned_to)
-                                setShowAddForm(true)
-                                // Scroll to form after a short delay to ensure it's rendered
-                                setTimeout(() => {
-                                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                }, 100)
-                              }}
+                              onEdit={(task, isInline) => window.editTaskCallback(task, isInline)}
                               onMarkComplete={(task) => {
                                 console.log('Completing task:', task.id)
-                                completeTask(task.id).then((response) => {
-                                  console.log('Complete response:', response)
-                                  const completionTime = response.completed_at || new Date().toISOString()
-                                  
-                                  // Update tasks with completion time
-                                  setTasks(prevTasks => 
-                                    prevTasks.map(t => 
-                                      t.id === task.id 
-                                        ? { ...t, status: 'completed', completed_at: completionTime }
-                                        : t
-                                    )
-                                  )
+                                completeTask(task.id).then(() => {
                                   refreshData(false)
                                   toast.success('Task marked as complete!')
                                 }).catch((err) => {

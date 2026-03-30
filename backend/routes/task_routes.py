@@ -73,25 +73,34 @@ async def complete_task(task_id: str, request: TaskCompleteRequest, authorizatio
     try:
         user = get_user_from_token(authorization)
         
+        # Get task details to credit the assigned user
+        task_response = supabase.table("tasks").select("assigned_to").eq("id", task_id).execute()
+        task_data = task_response.data[0] if task_response.data else {}
+        
+        # Credit the assignee in history, otherwise credit the user who clicked complete
+        completed_by = task_data.get("assigned_to") or user.id
+        
         # Update task status
+        now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         update_response = supabase.table("tasks").update({
-            "status": request.status,
-            "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            "status": "completed",
+            "updated_at": now_iso,
+            "completed_at": now_iso
         }).eq("id", task_id).execute()
         
         # Record in task history
         history_data = {
             "task_id": task_id,
-            "completed_by": user.id,
-            "completed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "completed_by": completed_by,
+            "completed_at": now_iso,
         }
         
-        history_response = supabase.table("task_history").insert(history_data).execute()
+        supabase.table("task_history").insert(history_data).execute()
         
         return {
             "message": "Task completed successfully",
             "task": update_response.data[0] if update_response.data else {},
-            "completed_at": history_data["completed_at"]
+            "completed_at": now_iso
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -149,12 +158,35 @@ async def update_task(task_id: str, request: TaskUpdateRequest, authorization: O
             update_data["assigned_to"] = request.assigned_to or None
         if request.status:
             update_data["status"] = request.status
+            if request.status == "completed":
+                update_data["completed_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         
         # Add updated_at timestamp when task is modified
         if update_data:
-            update_data["updated_at"] = datetime.now().astimezone().isoformat()
+            update_data["updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         
         response = supabase.table("tasks").update(update_data).eq("id", task_id).execute()
+        
+        # Root level fix: If status is updated to completed, record in history
+        if request.status == "completed":
+            # Get task details to credit the assigned user
+            task_response = supabase.table("tasks").select("assigned_to").eq("id", task_id).execute()
+            task_info = task_response.data[0] if task_response.data else {}
+            
+            # Credit the assignee, otherwise the current user
+            completed_by = task_info.get("assigned_to") or user.id
+            
+            # Record in task history
+            history_data = {
+                "task_id": task_id,
+                "completed_by": completed_by,
+                "completed_at": update_data.get("completed_at", update_data["updated_at"]),
+            }
+            
+            # Check if history already exists for this completion
+            history_check = supabase.table("task_history").select("id").eq("task_id", task_id).execute()
+            if not history_check.data:
+                supabase.table("task_history").insert(history_data).execute()
         
         return {
             "message": "Task updated successfully",

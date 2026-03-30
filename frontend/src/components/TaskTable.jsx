@@ -3,9 +3,44 @@ import { FaTrash, FaCheckCircle } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import StatusBadge from "./StatusBadge"
 
-export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, employeeNames, showActions = true, showEmployeeColumn = true, isHistory = false, isEmployeeView = false }) {
+export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, employeeNames, employees = [], showActions = true, showEmployeeColumn = true, isHistory = false, isEmployeeView = false }) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
+  
+  // Inline editing state
+  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editAssignedTo, setEditAssignedTo] = useState("")
+  
+  // Status change specific state
+  const [statusMenuTaskId, setStatusMenuTaskId] = useState(null)
+
+  const startEditing = (task) => {
+    const taskData = isHistory ? task.task : task
+    setEditingTaskId(task.id)
+    setEditTitle(taskData?.title || "")
+    setEditDescription(taskData?.description || "")
+    setEditAssignedTo(taskData?.assigned_to || "")
+  }
+
+  const cancelEditing = () => {
+    setEditingTaskId(null)
+  }
+
+  const handleUpdate = (currentTask) => {
+    if (onEdit) {
+      const taskData = isHistory ? currentTask.task : currentTask
+      onEdit({
+        id: currentTask.id,
+        title: editTitle,
+        description: editDescription,
+        assigned_to: editAssignedTo,
+        status: taskData?.status || "pending"
+      }, true) // Pass true to indicate it's an inline update
+    }
+    setEditingTaskId(null)
+  }
 
   const handleMarkComplete = (task) => {
     if (onMarkComplete) {
@@ -109,20 +144,51 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
             return (
               <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-sm text-gray-900">
-                    {truncateText(taskData?.title, 30)}
-                  </div>
+                  {editingTaskId === task.id ? (
+                    <input 
+                      type="text" 
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                    />
+                  ) : (
+                    <div className="font-medium text-sm text-gray-900">
+                      {truncateText(taskData?.title, 30)}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="text-sm text-gray-600">
-                    {truncateText(taskData?.description, 40)}
-                  </div>
+                  {editingTaskId === task.id ? (
+                    <input 
+                      type="text"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-600">
+                      {truncateText(taskData?.description, 40)}
+                    </div>
+                  )}
                 </td>
                 {showEmployeeColumn && (
                   <td className="px-4 py-3">
-                    <div className="text-sm text-gray-900">
-                      {userName}
-                    </div>
+                    {editingTaskId === task.id ? (
+                      <select
+                        value={editAssignedTo}
+                        onChange={(e) => setEditAssignedTo(e.target.value)}
+                        className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                      >
+                        <option value="">Select Employee</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="text-sm text-gray-900">
+                        {userName}
+                      </div>
+                    )}
                   </td>
                 )}
                 <td className="px-4 py-3">
@@ -135,8 +201,52 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     {formatTime(dateToShow)}
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={isHistory ? "completed" : taskData?.status} />
+                <td className="px-4 py-3 relative">
+                  <StatusBadge 
+                    status={isHistory ? "completed" : taskData?.status} 
+                    canChange={!isEmployeeView && !isHistory && (taskData?.status?.toLowerCase() === 'pending' || taskData?.status?.toLowerCase() === 'new')}
+                    onClick={() => {
+                      console.log("Opening status menu for task:", task.id)
+                      setStatusMenuTaskId(task.id)
+                    }}
+                  />
+                  
+                  {statusMenuTaskId === task.id && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setStatusMenuTaskId(null)}
+                      />
+                      <div className="absolute left-0 mt-1 w-32 bg-white rounded-lg shadow-xl border border-gray-100 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <button
+                          onClick={() => {
+                            onEdit({ ...taskData, status: 'completed' }, true)
+                            setStatusMenuTaskId(null)
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-emerald-700 hover:bg-emerald-50 font-medium transition-colors flex items-center gap-2"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          Complete
+                        </button>
+                        <button
+                          onClick={() => {
+                            onEdit({ ...taskData, status: 'new' }, true)
+                            setStatusMenuTaskId(null)
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 font-medium transition-colors flex items-center gap-2"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          New
+                        </button>
+                        <button
+                          onClick={() => setStatusMenuTaskId(null)}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-400 hover:bg-gray-50 transition-colors border-t border-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </td>
                 {showActions && (
                   <td className="px-4 py-3">
@@ -153,17 +263,34 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                       )}
                       {!isHistory && !isEmployeeView && (
                         <>
-                          <button
-                            onClick={() => onEdit && onEdit(task)}
-                            disabled={taskData?.status === 'completed'}
-                            className={`text-sm font-semibold px-2 py-1 rounded transition-colors ${
-                              (taskData?.status === 'completed' || task.status === 'completed') 
-                                ? 'text-gray-500 cursor-not-allowed' 
-                                : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                            }`}
-                          >
-                            Edit
-                          </button>
+                          {editingTaskId === task.id ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdate(task)}
+                                className="text-sm font-semibold px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                              >
+                                Update
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="text-sm font-semibold px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => startEditing(task)}
+                              disabled={taskData?.status?.toLowerCase() === 'completed'}
+                              className={`text-sm font-semibold px-2 py-1 rounded transition-colors ${
+                                (taskData?.status?.toLowerCase() === 'completed' || task.status?.toLowerCase() === 'completed') 
+                                  ? 'text-gray-400 cursor-not-allowed' 
+                                  : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                              }`}
+                            >
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(task)}
                             className="text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors"
