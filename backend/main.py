@@ -13,7 +13,9 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:5174",
         "https://smartbotics-taskflow-xtf9-beta.vercel.app",
-        "https://smartbotics-taskflow-xtf9-b8sgfkcym-saumya-gairolas-projects.vercel.app"
+        "https://smartbotics-taskflow-xtf9-b8sgfkcym-saumya-gairolas-projects.vercel.app",
+        "https://smartbotics-taskflow-cj8x.vercel.app",
+        "https://smartbotics-taskflow-cj8x-9jaxjmldn-saumya-gairolas-projects.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
