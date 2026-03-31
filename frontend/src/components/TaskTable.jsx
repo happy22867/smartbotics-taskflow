@@ -106,8 +106,8 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
 
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-4 text-gray-500">
-        <p className="text-sm">No tasks found</p>
+      <div className="text-center py-8 text-slate-400 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed m-4">
+        <p className="text-base font-medium">No tasks found</p>
       </div>
     )
   }
@@ -116,14 +116,14 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
     <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Title</th>
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Description</th>
-            {showEmployeeColumn && <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">User</th>}
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Date</th>
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Time</th>
-            <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Status</th>
-            {showActions && <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">Actions</th>}
+          <tr className="border-b border-slate-700 bg-slate-800">
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Title</th>
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Description</th>
+            {showEmployeeColumn && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">User</th>}
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Date</th>
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Time</th>
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Status</th>
+            {showActions && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -142,42 +142,42 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
               : (taskData?.updated_at || task.updated_at || taskData?.completed_at || task.completed_at || taskData?.created_at || task.created_at)
             
             return (
-              <tr key={task.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3">
+              <tr key={task.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors">
+                <td className="px-6 py-4">
                   {editingTaskId === task.id ? (
                     <input 
                       type="text" 
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
                     />
                   ) : (
-                    <div className="font-medium text-sm text-gray-900">
+                    <div className="font-bold text-base text-white">
                       {truncateText(taskData?.title, 30)}
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-6 py-4">
                   {editingTaskId === task.id ? (
                     <input 
                       type="text"
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
                     />
                   ) : (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-base text-slate-400 font-medium">
                       {truncateText(taskData?.description, 40)}
                     </div>
                   )}
                 </td>
                 {showEmployeeColumn && (
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     {editingTaskId === task.id ? (
                       <select
                         value={editAssignedTo}
                         onChange={(e) => setEditAssignedTo(e.target.value)}
-                        className="w-full px-2 py-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                        className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
                       >
                         <option value="">Select Employee</option>
                         {employees.map(emp => (
@@ -185,23 +185,23 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                         ))}
                       </select>
                     ) : (
-                      <div className="text-sm text-gray-900">
+                      <div className="text-base font-semibold text-slate-200 bg-slate-700 px-3 py-1 inline-block rounded-full">
                         {userName}
                       </div>
                     )}
                   </td>
                 )}
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-600">
+                <td className="px-6 py-4">
+                  <div className="text-base text-slate-300 font-medium">
                     {formatDate(dateToShow)}
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="text-sm text-gray-600">
+                <td className="px-6 py-4">
+                  <div className="text-base text-slate-300 font-medium">
                     {formatTime(dateToShow)}
                   </div>
                 </td>
-                <td className="px-4 py-3 relative">
+                <td className="px-6 py-4 relative">
                   <StatusBadge 
                     status={isHistory ? "completed" : taskData?.status} 
                     canChange={!isEmployeeView && !isHistory && (taskData?.status?.toLowerCase() === 'pending' || taskData?.status?.toLowerCase() === 'new')}
@@ -217,13 +217,13 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                         className="fixed inset-0 z-10" 
                         onClick={() => setStatusMenuTaskId(null)}
                       />
-                      <div className="absolute left-0 mt-1 w-32 bg-white rounded-lg shadow-xl border border-gray-100 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute left-0 mt-1 w-32 bg-slate-800 rounded-lg shadow-xl border border-slate-700 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                         <button
                           onClick={() => {
                             onEdit({ ...taskData, status: 'completed' }, true)
                             setStatusMenuTaskId(null)
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-emerald-700 hover:bg-emerald-50 font-medium transition-colors flex items-center gap-2"
+                          className="w-full px-4 py-2 text-left text-sm text-emerald-400 hover:bg-slate-700 font-medium transition-colors flex items-center gap-2"
                         >
                           <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                           Complete
@@ -233,14 +233,14 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                             onEdit({ ...taskData, status: 'new' }, true)
                             setStatusMenuTaskId(null)
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 font-medium transition-colors flex items-center gap-2"
+                          className="w-full px-4 py-2 text-left text-sm text-blue-400 hover:bg-slate-700 font-medium transition-colors flex items-center gap-2"
                         >
                           <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                           New
                         </button>
                         <button
                           onClick={() => setStatusMenuTaskId(null)}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-400 hover:bg-gray-50 transition-colors border-t border-gray-50"
+                          className="w-full px-4 py-2 text-left text-sm text-slate-400 hover:bg-slate-700 transition-colors border-t border-slate-700"
                         >
                           Cancel
                         </button>
@@ -249,15 +249,15 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                   )}
                 </td>
                 {showActions && (
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {isEmployeeView && taskData?.status !== 'completed' && (
                         <button
                           onClick={() => handleMarkComplete(task)}
-                          className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1"
+                          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-colors text-base font-bold flex items-center gap-2 shadow-sm"
                           title="Mark as complete"
                         >
-                          <FaCheckCircle />
+                          <FaCheckCircle className="text-lg" />
                           Complete
                         </button>
                       )}
@@ -267,13 +267,13 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                             <>
                               <button
                                 onClick={() => handleUpdate(task)}
-                                className="text-sm font-semibold px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                className="text-base font-bold px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-sm"
                               >
                                 Update
                               </button>
                               <button
                                 onClick={cancelEditing}
-                                className="text-sm font-semibold px-2 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                                className="text-base font-bold px-4 py-2 text-slate-200 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
                               >
                                 Cancel
                               </button>
@@ -282,10 +282,10 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                             <button
                               onClick={() => startEditing(task)}
                               disabled={taskData?.status?.toLowerCase() === 'completed'}
-                              className={`text-sm font-semibold px-2 py-1 rounded transition-colors ${
+                              className={`text-base font-bold px-4 py-2 rounded-lg transition-colors ${
                                 (taskData?.status?.toLowerCase() === 'completed' || task.status?.toLowerCase() === 'completed') 
-                                  ? 'text-gray-400 cursor-not-allowed' 
-                                  : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                                  ? 'text-slate-500 cursor-not-allowed bg-slate-800 border-transparent' 
+                                  : 'text-indigo-300 bg-slate-700 hover:bg-slate-600 border border-slate-600 shadow-sm'
                               }`}
                             >
                               Edit
@@ -293,7 +293,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                           )}
                           <button
                             onClick={() => handleDelete(task)}
-                            className="text-red-600 hover:text-red-800 text-sm font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                            className="text-red-400 hover:text-red-300 text-base font-bold px-4 py-2 rounded-lg hover:bg-slate-600 bg-slate-700 border border-slate-600 transition-colors shadow-sm ml-1"
                           >
                             Delete
                           </button>
@@ -308,29 +308,28 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
         </tbody>
       </table>
       
-      {/* Custom Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all border border-slate-700">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <FaTrash className="text-red-600 text-xl" />
+              <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
+                <FaTrash className="text-red-500 text-xl" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Task</h3>
-                <p className="text-sm text-gray-600">Are you sure you want to delete this task?</p>
+                <h3 className="text-lg font-semibold text-white">Delete Task</h3>
+                <p className="text-sm text-slate-400">Are you sure you want to delete this task?</p>
               </div>
             </div>
             <div className="flex justify-end gap-3">
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm"
               >
                 Delete
               </button>

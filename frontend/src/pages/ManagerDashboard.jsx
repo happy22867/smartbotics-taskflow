@@ -207,8 +207,13 @@ export default function ManagerDashboard() {
     }
   }
 
+  const parseDateSafe = (dateStr) => {
+    if (!dateStr) return new Date("");
+    return new Date(dateStr + (!dateStr.includes('Z') && !dateStr.includes('+') ? 'Z' : ''));
+  };
+
   const todayDate = new Date().toDateString()
-  const todayTasks = tasks.filter((t) => new Date(t.created_at).toDateString() === todayDate)
+  const todayTasks = tasks.filter((t) => parseDateSafe(t.created_at).toDateString() === todayDate)
 
   const activeStats = statsView === "today" ? {
     label: "Today's",
@@ -231,12 +236,12 @@ export default function ManagerDashboard() {
       const todayStr = new Date().toDateString()
       // For today's tasks, include both pending tasks and completed tasks with history
       const todayPendingTasks = tasks.filter((t) => 
-        (t.status === "pending" || t.status === "new") && new Date(t.created_at).toDateString() === todayStr
+        (t.status === "pending" || t.status === "new") && parseDateSafe(t.created_at).toDateString() === todayStr
       )
       
       // Get ANY completed tasks from history for today (even if created earlier)
       const todayCompletedTasks = history.filter((h) => 
-        new Date(h.completed_at).toDateString() === todayStr
+        parseDateSafe(h.completed_at).toDateString() === todayStr
       ).map(h => ({
         ...h.task,
         completed_at: h.completed_at,
@@ -261,10 +266,10 @@ export default function ManagerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-lg text-slate-400">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -296,14 +301,14 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-gray-100">
+    <div className="min-h-screen bg-slate-900 text-slate-200">
       <Navbar userName={userName} userRole={userRole} onLogout={handleLogout} />
 
-      <main className="pt-32 pb-24">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="pt-24 pb-12">
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="mb-6">
-            <h2 className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2">Dashboard</h2>
-            <p className="text-lg text-gray-500 font-medium tracking-wide">Manage tasks and track employee progress</p>
+            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-3">Dashboard</h2>
+            <p className="text-xl text-slate-400 font-medium tracking-wide">Manage tasks and track employee progress</p>
           </div>
 
           <div className="flex flex-col gap-10">
@@ -311,8 +316,8 @@ export default function ManagerDashboard() {
             <div className="w-full">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                   {/* Tasks Container */}
-                  <div className="bg-white rounded-2xl shadow-md border border-gray-100">
-                    <div className="border-b border-gray-100 p-6 sm:p-8">
+                  <div className="bg-slate-800 rounded-2xl shadow-xl border border-slate-700">
+                    <div className="border-b border-slate-700 p-6 sm:p-8">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => {
@@ -320,10 +325,10 @@ export default function ManagerDashboard() {
                             setShowHistory(false)
                             setSelectedEmployee("all")
                           }}
-                          className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                          className={`px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 ${
                             filter === "today" && !showHistory
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30"
+                              : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:shadow-lg"
                           }`}
                         >
                           Today
@@ -334,10 +339,10 @@ export default function ManagerDashboard() {
                             setShowHistory(false)
                             setSelectedEmployee("all")
                           }}
-                          className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                          className={`px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 ${
                             filter === "pending" && !showHistory
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30"
+                              : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:shadow-lg"
                           }`}
                         >
                           Pending
@@ -348,10 +353,10 @@ export default function ManagerDashboard() {
                             fetchHistory()
                             setSelectedEmployee("all")
                           }}
-                          className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                          className={`px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 ${
                             showHistory
-                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30"
+                              : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:shadow-lg"
                           }`}
                         >
                           History
@@ -363,13 +368,13 @@ export default function ManagerDashboard() {
                       {showHistory ? (
                         <div>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                            <h3 className="text-xl font-bold text-gray-900">Task History</h3>
+                            <h3 className="text-xl font-bold text-white">Task History</h3>
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Filter by Employee:</label>
+                              <label className="text-base font-semibold text-slate-400">Filter by Employee:</label>
                               <select
                                 value={selectedEmployee}
                                 onChange={(e) => setSelectedEmployee(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 shadow-sm"
                               >
                                 <option value="all">All Employees</option>
                                 {employees.map((emp) => (
@@ -395,13 +400,13 @@ export default function ManagerDashboard() {
                       ) : filter === "today" || filter === "pending" ? (
                         <div>
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                            <h3 className="text-xl font-bold text-gray-900">{getTaskTitle()}</h3>
+                            <h3 className="text-xl font-bold text-white">{getTaskTitle()}</h3>
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-700">Filter by Employee:</label>
+                              <label className="text-base font-semibold text-slate-400">Filter by Employee:</label>
                               <select
                                 value={selectedEmployee}
                                 onChange={(e) => setSelectedEmployee(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 shadow-sm"
                               >
                                 <option value="all">All Employees</option>
                                 {employees.map((emp) => (
@@ -450,35 +455,35 @@ export default function ManagerDashboard() {
                           <div className="flex justify-start">
                             <button
                               onClick={() => setShowAddForm(true)}
-                              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
+                              className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md shadow-indigo-500/20 text-base font-bold flex items-center gap-2"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                               </svg>
                               Add Task
                             </button>
                           </div>
                         ) : showAddForm ? (
-                          <div ref={formRef} className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                          <div ref={formRef} className="bg-slate-800/80 rounded-lg p-6 border border-slate-700">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <input
                                 type="text"
                                 placeholder="Task Title"
                                 value={newTaskTitle}
                                 onChange={(e) => setNewTaskTitle(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-slate-500"
                               />
                               <input
                                 type="text"
                                 placeholder="Task Description"
                                 value={newTaskDescription}
                                 onChange={(e) => setNewTaskDescription(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-slate-500"
                               />
                               <select
                                 value={newTaskAssignedTo}
                                 onChange={(e) => setNewTaskAssignedTo(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
                               >
                                 <option value="">Select Employee</option>
                                 {employees.map((emp) => (
@@ -497,13 +502,13 @@ export default function ManagerDashboard() {
                                   setNewTaskAssignedTo("")
                                   setEditingTask(null)
                                 }}
-                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                                className="px-6 py-3 bg-slate-700 text-slate-200 rounded-xl hover:bg-slate-600 transition-colors font-semibold text-base"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={editingTask ? handleEditTask : handleAddTask}
-                                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md font-bold text-base"
                               >
                                 {editingTask ? 'Update Task' : 'Add Task'}
                               </button>

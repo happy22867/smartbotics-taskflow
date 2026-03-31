@@ -75,15 +75,15 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 sm:p-10 transition-all duration-300">
-      <h3 className="text-3xl font-black text-gray-900 mb-8 tracking-tight">
+    <div className="bg-slate-800 rounded-3xl shadow-xl border border-slate-700 p-8 sm:p-10 transition-all duration-300">
+      <h3 className="text-3xl font-black text-white mb-8 tracking-tight">
         {editingTask ? "Edit Task" : "Create New Task"}
       </h3>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
+            <label className="block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">
               Task Title
             </label>
             <input
@@ -92,19 +92,19 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Design the new landing page"
               required
-              className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-gray-900"
+              className="w-full px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl focus:bg-slate-800 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-slate-200"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
+            <label className="block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">
               Assign To
             </label>
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
               required
-              className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-gray-900 appearance-none"
+              className="w-full px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl focus:bg-slate-800 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-slate-200 appearance-none"
             >
               <option value="">Select Employee</option>
               {employees.map((emp) => (
@@ -117,7 +117,7 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">
+          <label className="block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">
             Description
           </label>
           <textarea
@@ -125,7 +125,7 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add any extra details or context..."
             rows="4"
-            className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-gray-900 resize-y"
+            className="w-full px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl focus:bg-slate-800 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-lg font-medium text-slate-200 resize-y"
           />
         </div>
 
@@ -133,7 +133,7 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-lg rounded-xl shadow-lg shadow-indigo-200 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex-1 sm:flex-none"
+            className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white font-bold text-lg rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex-1 sm:flex-none"
           >
             {loading ? "Saving..." : editingTask ? "Update Task" : "Create Task"}
           </button>
@@ -141,7 +141,7 @@ export default function TaskForm({ onTaskCreated, editingTask, onEditComplete })
             <button
               type="button"
               onClick={onEditComplete}
-              className="px-8 py-4 bg-white border-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-lg rounded-xl transition-all duration-200 flex-1 sm:flex-none"
+              className="px-8 py-4 bg-slate-700 border-2 border-slate-600 hover:bg-slate-600 hover:border-slate-500 text-slate-200 font-bold text-lg rounded-xl transition-all duration-200 flex-1 sm:flex-none"
             >
               Cancel
             </button>

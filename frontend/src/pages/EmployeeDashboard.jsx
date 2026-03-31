@@ -109,12 +109,12 @@ export default function EmployeeDashboard() {
         const todayStr = new Date().toDateString()
         // For today's tasks, include both pending tasks and completed tasks with history
         const todayPendingTasks = myTasks.filter((t) => 
-          (t.status === "pending" || t.status === "new") && new Date(t.created_at).toDateString() === todayStr
+          (t.status === "pending" || t.status === "new") && parseDateSafe(t.created_at).toDateString() === todayStr
         )
         
         // Get ANY completed tasks from history for today (even if created earlier)
         const todayCompletedTasks = history.filter((h) => 
-          new Date(h.completed_at).toDateString() === todayStr
+          parseDateSafe(h.completed_at).toDateString() === todayStr
         ).map(h => ({
           ...h.task,
           completed_at: h.completed_at,
@@ -131,7 +131,7 @@ export default function EmployeeDashboard() {
         const todayStr = new Date().toDateString()
         filtered = allTasks.filter((t) => 
           t.assigned_to !== userId && 
-          new Date(t.created_at).toDateString() === todayStr
+          parseDateSafe(t.created_at).toDateString() === todayStr
         )
       } else if (filter === "team-total") {
         // Team Tasks - show all tasks for other employees
@@ -141,7 +141,7 @@ export default function EmployeeDashboard() {
         const todayStr = new Date().toDateString()
         filtered = allTasks.filter((t) => 
           t.assigned_to !== userId && 
-          new Date(t.created_at).toDateString() === todayStr
+          parseDateSafe(t.created_at).toDateString() === todayStr
         )
       }
       
@@ -181,8 +181,13 @@ export default function EmployeeDashboard() {
     }
   }, [userId])
 
+  const parseDateSafe = (dateStr) => {
+    if (!dateStr) return new Date("");
+    return new Date(dateStr + (!dateStr.includes('Z') && !dateStr.includes('+') ? 'Z' : ''));
+  };
+
   const todayDate = new Date().toDateString()
-  const todayTasks = myTasks.filter((t) => new Date(t.created_at).toDateString() === todayDate)
+  const todayTasks = myTasks.filter((t) => parseDateSafe(t.created_at).toDateString() === todayDate)
 
   const activeStats = statsView === "today" ? {
     label: "Today's",
@@ -198,42 +203,42 @@ export default function EmployeeDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-lg text-slate-400">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-gray-100">
+    <div className="min-h-screen bg-slate-900 text-slate-200">
       <Navbar userName={userName} userRole={userRole} onLogout={handleLogout} />
 
-      <main className="pt-32 pb-24">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="pt-24 pb-12">
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="mb-6">
-            <h2 className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2 leading-normal">My Tasks</h2>
-            <p className="text-lg text-gray-500 font-medium tracking-wide">Track and complete your assigned tasks</p>
+            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-3 leading-tight tracking-tight">My Tasks</h2>
+            <p className="text-xl text-slate-400 font-medium tracking-wide">Track and complete your assigned tasks</p>
           </div>
 
-          <div className="w-full max-w-5xl">
+          <div className="w-full">
           </div>
 
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 mb-12 overflow-hidden">
+          <div className="bg-slate-800 rounded-3xl shadow-xl border border-slate-700 mb-12 overflow-hidden">
             {/* Primary Filter Tabs */}
-            <div className="border-b border-gray-200 bg-white">
+            <div className="border-b border-slate-700 bg-slate-800">
               <nav className="flex px-6 sm:px-8 -mb-px space-x-8">
                 <button
                   onClick={() => {
                     setView("my-tasks")
                     setShowHistory(false)
                   }}
-                  className={`py-5 text-sm font-bold border-b-2 transition-colors duration-200 whitespace-nowrap ${
+                  className={`py-5 text-base font-bold border-b-[3px] transition-colors duration-200 whitespace-nowrap ${
                     view === "my-tasks"
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-indigo-400 text-indigo-300 bg-slate-700/50 px-4"
+                      : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600 px-4"
                   }`}
                 >
                   <span className="flex items-center gap-2">
@@ -248,10 +253,10 @@ export default function EmployeeDashboard() {
                     setSelectedEmployee("all")
                     setFilter("team-today")
                   }}
-                  className={`py-5 text-sm font-bold border-b-2 transition-colors duration-200 whitespace-nowrap ${
+                  className={`py-5 text-base font-bold border-b-[3px] transition-colors duration-200 whitespace-nowrap ${
                     view === "all-tasks"
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-indigo-400 text-indigo-300 bg-slate-700/50 px-4"
+                      : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600 px-4"
                   }`}
                 >
                   <span className="flex items-center gap-2">
@@ -264,26 +269,26 @@ export default function EmployeeDashboard() {
 
             {/* Secondary Filters */}
             {view === "my-tasks" && (
-              <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-8 py-4 flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-500 mr-2">Filter by:</span>
-                <div className="bg-gray-200/50 p-1 rounded-lg inline-flex">
+              <div className="bg-slate-800/80 border-b border-slate-700 px-6 sm:px-8 py-5 flex items-center gap-4">
+                <span className="text-base font-bold text-slate-300 mr-2">Filter by:</span>
+                <div className="bg-slate-900/50 p-1.5 rounded-xl inline-flex gap-1">
                   <button
                     type="button"
                     onClick={() => setFilter("my-today")}
-                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                    className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
                       filter === "my-today"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                        : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                     }`}
                   >
                     Today
                   </button>
                   <button
                     onClick={() => setFilter("my-pending")}
-                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                    className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
                       filter === "my-pending"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                        : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                     }`}
                   >
                     Pending
@@ -294,10 +299,10 @@ export default function EmployeeDashboard() {
                       setShowHistory(true)
                       fetchHistory()
                     }}
-                    className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                    className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
                       filter === "my-completed" && showHistory
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                        : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                     }`}
                   >
                     History
@@ -308,14 +313,14 @@ export default function EmployeeDashboard() {
 
             {/* Employee Filter for Team Tasks */}
             {view === "all-tasks" && (
-              <div className="bg-gray-50/80 border-b border-gray-100 px-6 sm:px-8 py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-500 mr-2">Filter by Employee:</span>
+              <div className="bg-slate-800/80 border-b border-slate-700 px-6 sm:px-8 py-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <span className="text-base font-bold text-slate-300 mr-2">Filter by Employee:</span>
                     <select
                       value={selectedEmployee}
                       onChange={(e) => setSelectedEmployee(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 min-w-[200px]"
                     >
                       <option value="all">All Team Members</option>
                       {employees.filter(emp => emp.id !== userId).map((emp) => (
@@ -325,26 +330,26 @@ export default function EmployeeDashboard() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-500 mr-2">Time Period:</span>
-                    <div className="bg-gray-200/50 p-1 rounded-lg inline-flex">
+                  <div className="flex items-center gap-4">
+                    <span className="text-base font-bold text-slate-300 mr-2">Time Period:</span>
+                    <div className="bg-slate-900/50 p-1.5 rounded-xl inline-flex gap-1">
                       <button
                         type="button"
                         onClick={() => setFilter("team-today")}
-                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                        className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
                           filter === "team-today"
-                            ? "bg-white text-indigo-700 shadow-sm"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                            : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                         }`}
                       >
                         Today
                       </button>
                       <button
                         onClick={() => setFilter("team-total")}
-                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all duration-200 ${
+                        className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
                           filter === "team-total"
-                            ? "bg-white text-indigo-700 shadow-sm"
-                            : "text-gray-600 hover:text-gray-900"
+                            ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                            : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                         }`}
                       >
                         Total
