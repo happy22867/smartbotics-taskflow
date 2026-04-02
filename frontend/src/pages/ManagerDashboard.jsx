@@ -33,7 +33,6 @@ export default function ManagerDashboard() {
     checkAuth()
     fetchTasks()
     fetchEmployees()
-    fetchHistory()
   }, [])
 
   useEffect(() => {
@@ -44,11 +43,7 @@ export default function ManagerDashboard() {
     setEmployeeNames(names)
   }, [employees])
 
-  useEffect(() => {
-    if (showHistory) {
-      fetchHistory()
-    }
-  }, [showHistory])
+
 
   // Set up global callbacks for table actions
   useEffect(() => {
@@ -151,13 +146,14 @@ export default function ManagerDashboard() {
   }
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim() || !newTaskAssignedTo) {
-      toast.error("Please fill in title and assign to someone")
+    if (!newTaskAssignedTo) {
+      toast.error("Please assign to someone")
       return
     }
+    const title = newTaskTitle.trim() || (newTaskDescription ? newTaskDescription.substring(0, 20) + "..." : "Task");
     
     try {
-      await createTask(newTaskTitle, newTaskDescription, newTaskAssignedTo)
+      await createTask(title, newTaskDescription, newTaskAssignedTo)
       toast.success("Task created successfully!")
       setNewTaskTitle("")
       setNewTaskDescription("")
@@ -172,13 +168,14 @@ export default function ManagerDashboard() {
   }
 
   const handleEditTask = async () => {
-    if (!newTaskTitle.trim() || !newTaskAssignedTo) {
-      toast.error("Please fill in title and assign to someone")
+    if (!newTaskAssignedTo) {
+      toast.error("Please assign to someone")
       return
     }
+    const title = newTaskTitle.trim() || (newTaskDescription ? newTaskDescription.substring(0, 20) + "..." : "Task");
     
     try {
-      await updateTask(editingTask.id, newTaskTitle, newTaskDescription, newTaskAssignedTo)
+      await updateTask(editingTask.id, title, newTaskDescription, newTaskAssignedTo)
       toast.success("Task updated successfully!")
       setNewTaskTitle("")
       setNewTaskDescription("")
@@ -306,10 +303,6 @@ export default function ManagerDashboard() {
 
       <main className="pt-24 pb-12">
         <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-6">
-            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-3">Dashboard</h2>
-            <p className="text-xl text-slate-400 font-medium tracking-wide">Manage tasks and track employee progress</p>
-          </div>
 
           <div className="flex flex-col gap-10">
             {/* Main Content Area */}
@@ -317,7 +310,7 @@ export default function ManagerDashboard() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                   {/* Tasks Container */}
                   <div className="bg-slate-800 rounded-2xl shadow-xl border border-slate-700">
-                    <div className="border-b border-slate-700 p-6 sm:p-8">
+                    <div className="border-b border-slate-700 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => {
@@ -362,29 +355,27 @@ export default function ManagerDashboard() {
                           History
                         </button>
                       </div>
+                      <div className="flex items-center gap-3">
+                        <label className="text-base font-semibold text-slate-400">Filter by Employee:</label>
+                        <select
+                          value={selectedEmployee}
+                          onChange={(e) => setSelectedEmployee(e.target.value)}
+                          className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 shadow-sm"
+                        >
+                          <option value="all">All Employees</option>
+                          {employees.map((emp) => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div className="p-6 sm:p-8">
                       {showHistory ? (
                         <div>
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                            <h3 className="text-xl font-bold text-white">Task History</h3>
-                            <div className="flex items-center gap-3">
-                              <label className="text-base font-semibold text-slate-400">Filter by Employee:</label>
-                              <select
-                                value={selectedEmployee}
-                                onChange={(e) => setSelectedEmployee(e.target.value)}
-                                className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 shadow-sm"
-                              >
-                                <option value="all">All Employees</option>
-                                {employees.map((emp) => (
-                                  <option key={emp.id} value={emp.id}>
-                                    {emp.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
+
                           {getFilteredHistory().length === 0 ? (
                             <EmptyState title="No completed tasks" description="Tasks completed by employees will appear here" />
                           ) : (
@@ -399,24 +390,7 @@ export default function ManagerDashboard() {
                         </div>
                       ) : filter === "today" || filter === "pending" ? (
                         <div>
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                            <h3 className="text-xl font-bold text-white">{getTaskTitle()}</h3>
-                            <div className="flex items-center gap-3">
-                              <label className="text-base font-semibold text-slate-400">Filter by Employee:</label>
-                              <select
-                                value={selectedEmployee}
-                                onChange={(e) => setSelectedEmployee(e.target.value)}
-                                className="px-5 py-3 border border-slate-600 rounded-xl text-base font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-900 text-slate-200 shadow-sm"
-                              >
-                                <option value="all">All Employees</option>
-                                {employees.map((emp) => (
-                                  <option key={emp.id} value={emp.id}>
-                                    {emp.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
+
                           {filteredTasks.length === 0 ? (
                             <EmptyState title={`No ${filter} tasks`} description={`No ${filter} tasks to display`} />
                           ) : (
@@ -465,14 +439,8 @@ export default function ManagerDashboard() {
                           </div>
                         ) : showAddForm ? (
                           <div ref={formRef} className="bg-slate-800/80 rounded-lg p-6 border border-slate-700">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <input
-                                type="text"
-                                placeholder="Task Title"
-                                value={newTaskTitle}
-                                onChange={(e) => setNewTaskTitle(e.target.value)}
-                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-slate-500"
-                              />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Title field removed from UI as requested */}
                               <input
                                 type="text"
                                 placeholder="Task Description"

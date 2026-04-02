@@ -15,6 +15,21 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
   
   // Status change specific state
   const [statusMenuTaskId, setStatusMenuTaskId] = useState(null)
+  
+  // Description expand state
+  const [expandedTasks, setExpandedTasks] = useState(new Set())
+
+  const toggleExpand = (taskId) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId)
+      } else {
+        newSet.add(taskId)
+      }
+      return newSet
+    })
+  }
 
   const startEditing = (task) => {
     const taskData = isHistory ? task.task : task
@@ -117,11 +132,11 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-slate-700 bg-slate-800">
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Title</th>
+            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Title</th> */}
             <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Description</th>
             {showEmployeeColumn && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">User</th>}
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Date</th>
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Time</th>
+            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Date</th> */}
+            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Time</th> */}
             <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Status</th>
             {showActions && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Actions</th>}
           </tr>
@@ -143,7 +158,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
             
             return (
               <tr key={task.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors">
-                <td className="px-6 py-4">
+                {/* <td className="px-6 py-4">
                   {editingTaskId === task.id ? (
                     <input 
                       type="text" 
@@ -156,18 +171,33 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                       {truncateText(taskData?.title, 30)}
                     </div>
                   )}
-                </td>
+                </td> */}
                 <td className="px-6 py-4">
                   {editingTaskId === task.id ? (
-                    <input 
-                      type="text"
+                    <textarea 
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[80px] shadow-sm resize-y"
                     />
                   ) : (
                     <div className="text-base text-slate-400 font-medium">
-                      {truncateText(taskData?.description, 40)}
+                      {taskData?.description?.length > 40 ? (
+                        <>
+                          <span className="whitespace-pre-wrap">
+                            {expandedTasks.has(task.id) 
+                              ? taskData.description 
+                              : truncateText(taskData.description, 40)}
+                          </span>
+                          <button 
+                            onClick={() => toggleExpand(task.id)}
+                            className="ml-2 text-indigo-400 hover:text-indigo-300 text-sm font-semibold transition-colors focus:outline-none inline-flex items-center"
+                          >
+                            {expandedTasks.has(task.id) ? "Show less" : "Read more"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="whitespace-pre-wrap">{taskData?.description || "-"}</span>
+                      )}
                     </div>
                   )}
                 </td>
@@ -191,7 +221,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     )}
                   </td>
                 )}
-                <td className="px-6 py-4">
+                {/* <td className="px-6 py-4">
                   <div className="text-base text-slate-300 font-medium">
                     {formatDate(dateToShow)}
                   </div>
@@ -200,7 +230,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                   <div className="text-base text-slate-300 font-medium">
                     {formatTime(dateToShow)}
                   </div>
-                </td>
+                </td> */}
                 <td className="px-6 py-4 relative">
                   <StatusBadge 
                     status={isHistory ? "completed" : taskData?.status} 

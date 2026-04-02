@@ -28,7 +28,7 @@ def _is_email_already_registered_error(exc: Exception) -> bool:
 
 
 @router.post("/signup")
-async def signup(request: SignupRequest):
+def signup(request: SignupRequest):
     email = request.email
     password = request.password
     auth_response = None
@@ -90,7 +90,7 @@ async def signup(request: SignupRequest):
     }
 
 @router.post("/login")
-async def login(request: LoginRequest):
+def login(request: LoginRequest):
     try:
         # Sign in with Supabase Auth
         auth_response = supabase.auth.sign_in_with_password({
@@ -130,7 +130,7 @@ async def login(request: LoginRequest):
             raise HTTPException(status_code=401, detail=error_message)
 
 @router.get("/me")
-async def get_current_user(authorization: Optional[str] = Header(None)):
+def get_current_user(authorization: Optional[str] = Header(None)):
     try:
         if not authorization:
             raise HTTPException(status_code=401, detail="Missing authorization header")
@@ -157,7 +157,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 @router.get("/employees")
-async def get_employees(authorization: Optional[str] = Header(None)):
+def get_employees(authorization: Optional[str] = Header(None)):
     try:
         if not authorization:
             raise HTTPException(status_code=401, detail="Missing authorization header")

@@ -31,7 +31,6 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     if (userId) {
-      fetchHistory()
       fetchEmployees()
     }
   }, [userId])
@@ -218,10 +217,6 @@ export default function EmployeeDashboard() {
 
       <main className="pt-24 pb-12">
         <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-6">
-            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent mb-3 leading-tight tracking-tight">My Tasks</h2>
-            <p className="text-xl text-slate-400 font-medium tracking-wide">Track and complete your assigned tasks</p>
-          </div>
 
           <div className="w-full">
           </div>

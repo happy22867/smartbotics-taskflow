@@ -20,7 +20,7 @@ def get_user_from_token(authorization: Optional[str]):
     return user.user
 
 @router.post("/create")
-async def create_task(request: TaskCreateRequest, authorization: Optional[str] = Header(None)):
+def create_task(request: TaskCreateRequest, authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -43,7 +43,7 @@ async def create_task(request: TaskCreateRequest, authorization: Optional[str] =
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/all")
-async def get_all_tasks(authorization: Optional[str] = Header(None)):
+def get_all_tasks(authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -56,7 +56,7 @@ async def get_all_tasks(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/my")
-async def get_my_tasks(authorization: Optional[str] = Header(None)):
+def get_my_tasks(authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -69,7 +69,7 @@ async def get_my_tasks(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{task_id}/complete")
-async def complete_task(task_id: str, request: TaskCompleteRequest, authorization: Optional[str] = Header(None)):
+def complete_task(task_id: str, request: TaskCompleteRequest, authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -106,7 +106,7 @@ async def complete_task(task_id: str, request: TaskCompleteRequest, authorizatio
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/history")
-async def get_task_history(authorization: Optional[str] = Header(None)):
+def get_task_history(authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -145,7 +145,7 @@ async def get_task_history(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{task_id}")
-async def update_task(task_id: str, request: TaskUpdateRequest, authorization: Optional[str] = Header(None)):
+def update_task(task_id: str, request: TaskUpdateRequest, authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
@@ -196,7 +196,7 @@ async def update_task(task_id: str, request: TaskUpdateRequest, authorization: O
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{task_id}")
-async def delete_task(task_id: str, authorization: Optional[str] = Header(None)):
+def delete_task(task_id: str, authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
