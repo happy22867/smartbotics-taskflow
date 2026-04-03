@@ -22,12 +22,8 @@ export default function ManagerDashboard() {
   const [newTaskNotes, setNewTaskNotes] = useState("")
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-  const [loading, setLoading] = useState(() => {
-    // Only show full-page loading if no cached tasks or employees exist
-    const cachedTasks = localStorage.getItem('manager_tasks');
-    const cachedEmps = localStorage.getItem('manager_employees');
-    return !(cachedTasks || cachedEmps);
-  })
+  // Always start loading=true so the first fresh fetch always completes before content shows
+  const [loading, setLoading] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('manager_history')) || [])
   const [currentTab, setCurrentTab] = useState("manage")
@@ -36,10 +32,10 @@ export default function ManagerDashboard() {
   const navigate = useNavigate()
   const formRef = useRef(null)
 
+  // Single useEffect: only checkAuth runs on mount.
+  // checkAuth sequentially confirms identity THEN fetches data — no races.
   useEffect(() => {
     checkAuth()
-    fetchTasks()
-    fetchEmployees()
   }, [])
 
   useEffect(() => {
@@ -112,7 +108,8 @@ export default function ManagerDashboard() {
   }, [])
 
   const checkAuth = async () => {
-    // Optimization: Check local cache first
+    // Resolve user identity first (from cache or API), then fetch data.
+    // This ensures data fetches are never fired before auth is confirmed.
     const cachedUser = getUserProfile();
     if (cachedUser) {
       if (cachedUser.role !== "manager") {
@@ -121,7 +118,12 @@ export default function ManagerDashboard() {
       }
       setUserName(cachedUser.name);
       setUserRole(cachedUser.role || "");
-      // Fetch fresh profile in background to keep it synced
+      // Run tasks and employees fetch in parallel now that auth is confirmed
+      await Promise.all([
+        fetchTasks(),
+        fetchEmployees()
+      ]);
+      // Sync fresh profile in background (does not block UI)
       getCurrentUser().then(setUserProfile).catch(() => {});
     } else {
       try {
@@ -133,6 +135,11 @@ export default function ManagerDashboard() {
         setUserName(user.name)
         setUserRole(user.role || "")
         setUserProfile(user);
+        // Run tasks and employees fetch in parallel now that auth is confirmed
+        await Promise.all([
+          fetchTasks(),
+          fetchEmployees()
+        ]);
       } catch (err) {
         navigate("/")
       }
@@ -140,7 +147,7 @@ export default function ManagerDashboard() {
   }
 
   const refreshData = async (showLoading = true) => {
-    if (showLoading && !tasks.length) setLoading(true)
+    if (showLoading) setLoading(true)
     try {
       const [tasksData, historyData] = await Promise.all([
         getAllTasks(),
@@ -163,7 +170,7 @@ export default function ManagerDashboard() {
   }
 
   const fetchTasks = async () => {
-    refreshData(true)
+    return refreshData(true)
   }
 
   const fetchEmployees = async () => {

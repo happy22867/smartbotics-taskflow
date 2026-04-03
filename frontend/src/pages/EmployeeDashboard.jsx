@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
@@ -15,7 +15,8 @@ export default function EmployeeDashboard() {
   const [userRole, setUserRole] = useState("")
   const [userId, setUserId] = useState("")
   const [filter, setFilter] = useState("my-pending")
-  const [loading, setLoading] = useState(() => !localStorage.getItem('employee_my_tasks'))
+  // Always start with loading=true so fresh fetch always completes before content renders
+  const [loading, setLoading] = useState(true)
   const [view, setView] = useState("my-tasks")
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('employee_history')) || [])
@@ -23,6 +24,8 @@ export default function EmployeeDashboard() {
   const [selectedEmployee, setSelectedEmployee] = useState("all")
   const [employees, setEmployees] = useState(() => JSON.parse(localStorage.getItem('employee_profiles')) || [])
   const [employeeNames, setEmployeeNames] = useState({})
+  // Use a ref to hold the resolved userId so async closures always see the latest value
+  const userIdRef = useRef("")
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -30,17 +33,12 @@ export default function EmployeeDashboard() {
   }, [])
 
   useEffect(() => {
-    if (userId) {
-      fetchEmployees()
-    }
-  }, [userId])
-
-  useEffect(() => {
     applyFilter()
   }, [myTasks, allTasks, filter, view, selectedEmployee])
 
   const checkAuth = async () => {
-    // Optimization: Check local cache first
+    // Resolve user identity first (from cache or API), then fetch data
+    // This ensures userId is always known before any data fetch runs
     const cachedUser = getUserProfile();
     if (cachedUser) {
       if (cachedUser.role !== "employee") {
@@ -50,8 +48,13 @@ export default function EmployeeDashboard() {
       setUserName(cachedUser.name);
       setUserRole(cachedUser.role || "");
       setUserId(cachedUser.id);
-      fetchTasks(cachedUser.id);
-      // Fetch fresh profile in background to keep it synced
+      userIdRef.current = cachedUser.id;
+      // Run tasks fetch and employees fetch in parallel - userId is now stored in ref
+      await Promise.all([
+        refreshData(true, cachedUser.id),
+        fetchEmployees()
+      ]);
+      // Sync fresh profile in background (does not block UI)
       getCurrentUser().then(setUserProfile).catch(() => {});
     } else {
       try {
@@ -63,16 +66,22 @@ export default function EmployeeDashboard() {
         setUserName(user.name)
         setUserRole(user.role || "")
         setUserId(user.id)
+        userIdRef.current = user.id;
         setUserProfile(user);
-        fetchTasks(user.id)
+        // Run tasks fetch and employees fetch in parallel - userId is now stored in ref
+        await Promise.all([
+          refreshData(true, user.id),
+          fetchEmployees()
+        ]);
       } catch (err) {
         navigate("/")
       }
     }
   }
 
-  const refreshData = async (showLoading = true) => {
-    if (showLoading && !myTasks.length) setLoading(true)
+  // refreshData now accepts the resolved userId directly to avoid stale closure bugs
+  const refreshData = async (showLoading = true, resolvedUserId) => {
+    if (showLoading) setLoading(true)
     try {
       const [myTasksData, allTasksData, historyData] = await Promise.all([
         getMyTasks(),
@@ -87,7 +96,9 @@ export default function EmployeeDashboard() {
       setMyTasks(freshMyTasks)
       setAllTasks(freshAllTasks)
       
-      const userHistory = freshHistory.filter(h => h.profile?.id === userId)
+      // Use the passed userId or fall back to the ref (never uses stale state)
+      const effectiveUserId = resolvedUserId || userIdRef.current
+      const userHistory = freshHistory.filter(h => h.profile?.id === effectiveUserId)
       setHistory(userHistory)
 
       // Persist for instant load next time
@@ -99,10 +110,6 @@ export default function EmployeeDashboard() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const fetchTasks = async (empId) => {
-    refreshData(true)
   }
 
   const fetchEmployees = async () => {
@@ -188,8 +195,8 @@ export default function EmployeeDashboard() {
   const fetchHistory = async () => {
     try {
       const data = await getTaskHistory()
-      // Filter history to show only current user's tasks
-      const userHistory = (data.history || []).filter(h => h.profile?.id === userId)
+      // Use ref so this always has the resolved userId, even if called from a stale closure
+      const userHistory = (data.history || []).filter(h => h.profile?.id === userIdRef.current)
       setHistory(userHistory)
     } catch (err) {
       console.error("Error fetching history:", err)
@@ -199,13 +206,14 @@ export default function EmployeeDashboard() {
   // Set up global callbacks for table actions
   useEffect(() => {
     window.completeTaskCallback = (taskId) => {
-      completeTask(taskId).then(() => refreshData(false)).catch(console.error)
+      // Pass userIdRef.current so refreshData never uses a stale userId from the closure
+      completeTask(taskId).then(() => refreshData(false, userIdRef.current)).catch(console.error)
     }
     
     return () => {
       delete window.completeTaskCallback
     }
-  }, [userId])
+  }, [])
 
   const parseDateSafe = (dateStr) => {
     if (!dateStr) return new Date("");
@@ -416,7 +424,7 @@ export default function EmployeeDashboard() {
                   onMarkComplete={(task) => {
                     console.log('Employee completing task:', task.id)
                     completeTask(task.id).then(() => {
-                      refreshData(false)
+                      refreshData(false, userIdRef.current)
                       toast.success('Task marked as complete!')
                     }).catch((err) => {
                       console.error('Employee complete task error:', err)
