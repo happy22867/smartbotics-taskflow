@@ -18,11 +18,24 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
   // Status change specific state
   const [statusMenuTaskId, setStatusMenuTaskId] = useState(null)
   
-  // Description expand state
+  // Description and Notes expand state
   const [expandedTasks, setExpandedTasks] = useState(new Set())
+  const [expandedNotes, setExpandedNotes] = useState(new Set())
 
   const toggleExpand = (taskId) => {
     setExpandedTasks(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId)
+      } else {
+        newSet.add(taskId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleExpandNotes = (taskId) => {
+    setExpandedNotes(prev => {
       const newSet = new Set(prev)
       if (newSet.has(taskId)) {
         newSet.delete(taskId)
@@ -120,7 +133,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  const truncateText = (text, maxLength = 50) => {
+  const truncateText = (text, maxLength = 40) => {
     if (!text) return "-"
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text
   }
@@ -144,23 +157,22 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto pb-24">
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-slate-700 bg-slate-800">
-            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Title</th> */}
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Description</th>
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Priority</th>
-            {showEmployeeColumn && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Owner</th>}
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Notes</th>
+            <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Description</th>
+            <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Priority</th>
+            {showEmployeeColumn && <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Owner</th>}
+            <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Notes</th>
             {isHistory && (
               <>
-                <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Created At</th>
-                <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Completed At</th>
+                <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider whitespace-nowrap">Created</th>
+                <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider whitespace-nowrap">Completed</th>
               </>
             )}
-            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Status</th>
-            {showActions && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Actions</th>}
+            <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Status</th>
+            {showActions && <th className="text-left px-4 py-3 text-sm font-bold text-slate-200 uppercase tracking-wider">Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -176,29 +188,15 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
             
             return (
               <tr key={task.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors">
-                {/* <td className="px-6 py-4">
-                  {editingTaskId === task.id ? (
-                    <input 
-                      type="text" 
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
-                    />
-                  ) : (
-                    <div className="font-bold text-base text-white">
-                      {truncateText(taskData?.title, 30)}
-                    </div>
-                  )}
-                </td> */}
-                <td className="px-6 py-4">
+                <td className="px-4 py-2.5">
                   {editingTaskId === task.id ? (
                     <textarea 
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[80px] shadow-sm resize-y"
+                      className="w-full px-3 py-1.5 text-sm border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[60px] shadow-sm resize-y"
                     />
                   ) : (
-                    <div className="text-base text-slate-400 font-medium">
+                    <div className="text-sm text-slate-400 font-medium">
                       {taskData?.description?.length > 40 ? (
                         <>
                           <span className="whitespace-pre-wrap">
@@ -208,7 +206,7 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                           </span>
                           <button 
                             onClick={() => toggleExpand(task.id)}
-                            className="ml-2 text-indigo-400 hover:text-indigo-300 text-sm font-semibold transition-colors focus:outline-none inline-flex items-center"
+                            className="ml-2 text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors focus:outline-none inline-flex items-center"
                           >
                             {expandedTasks.has(task.id) ? "Show less" : "Read more"}
                           </button>
@@ -219,12 +217,12 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-2.5">
                   {editingTaskId === task.id ? (
                     <select
                       value={editPriority}
                       onChange={(e) => setEditPriority(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                      className="w-full px-2 py-1 text-sm border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-9 shadow-sm"
                     >
                       <option value="P1">P1</option>
                       <option value="P2">P2</option>
@@ -232,18 +230,18 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                       <option value="P4">P4</option>
                     </select>
                   ) : (
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityColor(taskData?.priority || 'P3')}`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getPriorityColor(taskData?.priority || 'P3')}`}>
                       {taskData?.priority || 'P3'}
                     </span>
                   )}
                 </td>
                 {showEmployeeColumn && (
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-2.5">
                     {editingTaskId === task.id ? (
                       <select
                         value={editAssignedTo}
                         onChange={(e) => setEditAssignedTo(e.target.value)}
-                        className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                        className="w-full px-2 py-1 text-sm border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-9 shadow-sm"
                       >
                         <option value="">Select Employee</option>
                         {employees.map(emp => (
@@ -251,36 +249,52 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                         ))}
                       </select>
                     ) : (
-                      <div className="text-base font-semibold text-slate-200 bg-slate-700 px-3 py-1 inline-block rounded-full">
+                      <div className="text-xs font-semibold text-slate-200 bg-slate-700/50 px-2.5 py-0.5 inline-block rounded-full border border-slate-600/50">
                         {userName}
                       </div>
                     )}
                   </td>
                 )}
-                <td className="px-6 py-4">
+                <td className="px-4 py-2.5">
                   {editingTaskId === task.id ? (
                     <input 
                       type="text" 
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                      className="w-full px-2 py-1 text-sm border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-9 shadow-sm"
                       placeholder="Notes"
                     />
                   ) : (
-                    <div className="text-base text-slate-400 font-medium italic">
-                      {taskData?.notes || "-"}
+                    <div className="text-sm text-slate-400 font-medium italic">
+                      {taskData?.notes?.length > 40 ? (
+                        <>
+                          <span className="whitespace-pre-wrap">
+                            {expandedNotes.has(task.id) 
+                              ? taskData.notes 
+                              : truncateText(taskData.notes, 40)}
+                          </span>
+                          <button 
+                            onClick={() => toggleExpandNotes(task.id)}
+                            className="ml-2 text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors focus:outline-none inline-flex items-center"
+                          >
+                            {expandedNotes.has(task.id) ? "Show less" : "Read more"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="whitespace-pre-wrap">{taskData?.notes || "-"}</span>
+                      )}
                     </div>
                   )}
                 </td>
                 {isHistory && (
                   <>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                    <td className="px-4 py-2.5">
+                      <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
                         {formatDate(taskData?.created_at)}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                    <td className="px-4 py-2.5">
+                      <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
                         {taskData?.status?.toLowerCase() === 'completed'
                           ? formatDate(taskData?.completed_at || (isHistoricalRecord ? task.completed_at : null) || taskData?.updated_at)
                           : '-'}
@@ -288,12 +302,11 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     </td>
                   </>
                 )}
-                <td className="px-6 py-4 relative">
+                <td className={`px-4 py-2.5 relative ${statusMenuTaskId === task.id ? 'z-50' : 'z-20'}`}>
                   <StatusBadge 
                     status={taskData?.status} 
                     canChange={!isEmployeeView && !isHistory && (taskData?.status?.toLowerCase() === 'pending' || taskData?.status?.toLowerCase() === 'new')}
                     onClick={() => {
-                      console.log("Opening status menu for task:", task.id)
                       setStatusMenuTaskId(task.id)
                     }}
                   />
@@ -304,15 +317,15 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                         className="fixed inset-0 z-10" 
                         onClick={() => setStatusMenuTaskId(null)}
                       />
-                      <div className="absolute left-0 mt-1 w-32 bg-slate-800 rounded-lg shadow-xl border border-slate-700 z-20 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute left-0 top-full mt-1 w-32 bg-slate-800 rounded-lg shadow-2xl border border-slate-700 z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                         <button
                           onClick={() => {
                             onEdit({ ...taskData, status: 'completed' }, true)
                             setStatusMenuTaskId(null)
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-emerald-400 hover:bg-slate-700 font-medium transition-colors flex items-center gap-2"
+                          className="w-full px-4 py-2.5 text-left text-xs text-emerald-400 hover:bg-slate-700 font-bold transition-colors flex items-center gap-2"
                         >
-                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                           Complete
                         </button>
                         <button
@@ -320,71 +333,65 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                             onEdit({ ...taskData, status: 'new' }, true)
                             setStatusMenuTaskId(null)
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-blue-400 hover:bg-slate-700 font-medium transition-colors flex items-center gap-2"
+                          className="w-full px-4 py-2.5 text-left text-xs text-blue-400 hover:bg-slate-700 font-bold transition-colors flex items-center gap-2"
                         >
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                           New
-                        </button>
-                        <button
-                          onClick={() => setStatusMenuTaskId(null)}
-                          className="w-full px-4 py-2 text-left text-sm text-slate-400 hover:bg-slate-700 transition-colors border-t border-slate-700"
-                        >
-                          Cancel
                         </button>
                       </div>
                     </>
                   )}
                 </td>
                 {showActions && (
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-1.5">
                       {isEmployeeView && taskData?.status !== 'completed' && (
                         <button
                           onClick={() => handleMarkComplete(task)}
-                          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-colors text-base font-bold flex items-center gap-2 shadow-sm"
+                          className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-colors text-xs font-bold flex items-center gap-1.5 shadow-sm"
                           title="Mark as complete"
                         >
-                          <FaCheckCircle className="text-lg" />
+                          <FaCheckCircle />
                           Complete
                         </button>
                       )}
                       {!isHistory && !isEmployeeView && (
                         <>
                           {editingTaskId === task.id ? (
-                            <>
+                            <div className="flex gap-1">
                               <button
                                 onClick={() => handleUpdate(task)}
-                                className="text-base font-bold px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-sm"
+                                className="text-xs font-bold px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all shadow-sm whitespace-nowrap"
                               >
-                                Update
+                                Save
                               </button>
                               <button
                                 onClick={cancelEditing}
-                                className="text-base font-bold px-4 py-2 text-slate-200 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                                className="text-xs font-bold px-3 py-1.5 text-slate-200 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
                               >
-                                Cancel
+                                X
                               </button>
-                            </>
+                            </div>
                           ) : (
                             <button
                               onClick={() => startEditing(task)}
                               disabled={taskData?.status?.toLowerCase() === 'completed'}
-                              className={`text-base font-bold px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
+                              className={`text-xs font-bold p-2 rounded-lg transition-colors flex items-center justify-center ${
                                 (taskData?.status?.toLowerCase() === 'completed' || task.status?.toLowerCase() === 'completed') 
-                                  ? 'text-slate-500 cursor-not-allowed bg-slate-800 border-transparent' 
-                                  : 'text-indigo-300 bg-slate-700 hover:bg-slate-600 border border-slate-600 shadow-sm'
+                                  ? 'text-slate-500 cursor-not-allowed bg-slate-800' 
+                                  : 'text-indigo-300 bg-slate-700 hover:bg-slate-600 border border-slate-600/50 shadow-sm'
                               }`}
                               title="Edit"
                             >
-                              <FaEdit className="text-lg" />
+                              <FaEdit />
                             </button>
                           )}
                           <button
                             onClick={() => handleDelete(task)}
-                            className="text-red-400 hover:text-red-300 text-base font-bold px-4 py-2 rounded-lg hover:bg-slate-600 bg-slate-700 border border-slate-600 transition-colors shadow-sm ml-1 flex items-center justify-center"
+                            className="text-red-400 hover:text-red-300 text-xs font-bold p-2 rounded-lg hover:bg-slate-600 bg-slate-700 border border-slate-600/50 transition-colors shadow-sm flex items-center justify-center"
                             title="Delete"
                           >
-                            <FaTrash className="text-lg" />
+                            <FaTrash />
                           </button>
                         </>
                       )}
@@ -399,26 +406,26 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
       
       {showConfirmDialog && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all border border-slate-700">
+          <div className="bg-slate-800 rounded-xl shadow-2xl p-5 max-w-sm w-full mx-4 transform transition-all border border-slate-700">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
-                <FaTrash className="text-red-500 text-xl" />
+              <div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center">
+                <FaTrash className="text-red-500 text-lg" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Delete Task</h3>
-                <p className="text-sm text-slate-400">Are you sure you want to delete this task?</p>
+                <h3 className="text-base font-semibold text-white">Delete Task</h3>
+                <p className="text-xs text-slate-400">This action cannot be undone.</p>
               </div>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors font-medium"
+                className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors text-sm font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-sm"
+                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
               >
                 Delete
               </button>
