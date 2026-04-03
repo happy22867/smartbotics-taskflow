@@ -28,6 +28,8 @@ def create_task(request: TaskCreateRequest, authorization: Optional[str] = Heade
             "title": request.title,
             "description": request.description,
             "assigned_to": request.assigned_to or None,
+            "priority": request.priority or "P3",
+            "notes": request.notes or "",
             "created_by": user.id,
             "status": "pending",
             "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -110,26 +112,29 @@ def get_task_history(authorization: Optional[str] = Header(None)):
     try:
         user = get_user_from_token(authorization)
         
-        # Get history
+        # Robust way: fetch IDs first and then data
         history_response = supabase.table("task_history").select("*").order("completed_at", desc=True).execute()
         
-        task_ids = [h["task_id"] for h in history_response.data]
-        
-        if not task_ids:
+        if not history_response.data:
             return {"history": []}
+            
+        task_ids = list(set([h["task_id"] for h in history_response.data if h.get("task_id")]))
+        profile_ids = list(set([h["completed_by"] for h in history_response.data if h.get("completed_by")]))
         
-        # Get task details
-        tasks_response = supabase.table("tasks").select("*").in_("id", task_ids).execute()
+        # Concurrent-like fetching (even if sequential, it is safe)
+        if task_ids:
+            tasks_response = supabase.table("tasks").select("*").in_("id", task_ids).execute()
+        else:
+            tasks_response = type('Response', (), {'data': []})
+
+        if profile_ids:
+            profiles_response = supabase.table("profiles").select("*").in_("id", profile_ids).execute()
+        else:
+            profiles_response = type('Response', (), {'data': []})
         
-        # Get profile details
-        profile_ids = list(set([h["completed_by"] for h in history_response.data]))
-        profiles_response = supabase.table("profiles").select("*").in_("id", profile_ids).execute()
-        
-        # Build maps
         tasks_map = {t["id"]: t for t in tasks_response.data}
         profiles_map = {p["id"]: p for p in profiles_response.data}
         
-        # Enrich history
         enriched_history = []
         for h in history_response.data:
             enriched_history.append({
@@ -137,10 +142,8 @@ def get_task_history(authorization: Optional[str] = Header(None)):
                 "task": tasks_map.get(h["task_id"]),
                 "profile": profiles_map.get(h["completed_by"])
             })
-        
-        return {
-            "history": enriched_history
-        }
+            
+        return {"history": enriched_history}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -160,6 +163,10 @@ def update_task(task_id: str, request: TaskUpdateRequest, authorization: Optiona
             update_data["status"] = request.status
             if request.status == "completed":
                 update_data["completed_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        if request.priority:
+            update_data["priority"] = request.priority
+        if request.notes is not None:
+            update_data["notes"] = request.notes
         
         # Add updated_at timestamp when task is modified
         if update_data:

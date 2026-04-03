@@ -5,12 +5,12 @@ import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
 import TaskTable from "../components/TaskTable"
-import { getAllTasks, getTaskHistory, updateTask, completeTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees, createTask } from "../api/client"
+import { getAllTasks, getTaskHistory, updateTask, completeTask, deleteTask, getCurrentUser, clearAuthToken, getEmployees, createTask, getUserProfile, setUserProfile } from "../api/client"
 import toast from "react-hot-toast"
 
 export default function ManagerDashboard() {
-  const [tasks, setTasks] = useState([])
-  const [employees, setEmployees] = useState([])
+  const [tasks, setTasks] = useState(() => JSON.parse(localStorage.getItem('manager_tasks')) || [])
+  const [employees, setEmployees] = useState(() => JSON.parse(localStorage.getItem('manager_employees')) || [])
   const [employeeNames, setEmployeeNames] = useState({})
   const [userName, setUserName] = useState("")
   const [userRole, setUserRole] = useState("")
@@ -18,11 +18,18 @@ export default function ManagerDashboard() {
   const [newTaskTitle, setNewTaskTitle] = useState("")
   const [newTaskDescription, setNewTaskDescription] = useState("")
   const [newTaskAssignedTo, setNewTaskAssignedTo] = useState("")
+  const [newTaskPriority, setNewTaskPriority] = useState("P3")
+  const [newTaskNotes, setNewTaskNotes] = useState("")
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => {
+    // Only show full-page loading if no cached tasks or employees exist
+    const cachedTasks = localStorage.getItem('manager_tasks');
+    const cachedEmps = localStorage.getItem('manager_employees');
+    return !(cachedTasks || cachedEmps);
+  })
   const [showHistory, setShowHistory] = useState(false)
-  const [history, setHistory] = useState([])
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('manager_history')) || [])
   const [currentTab, setCurrentTab] = useState("manage")
   const [statsView, setStatsView] = useState("today")
   const [selectedEmployee, setSelectedEmployee] = useState("all")
@@ -66,7 +73,7 @@ export default function ManagerDashboard() {
           return
         }
 
-        updateTask(task.id, task.title, task.description, task.assigned_to, task.status)
+        updateTask(task.id, task.title, task.description, task.assigned_to, task.status, task.priority, task.notes)
           .then(() => {
             console.log("Update success")
             refreshData(false)
@@ -82,6 +89,8 @@ export default function ManagerDashboard() {
         setNewTaskTitle(task.title || "")
         setNewTaskDescription(task.description || "")
         setNewTaskAssignedTo(task.assigned_to || "")
+        setNewTaskPriority(task.priority || "P3")
+        setNewTaskNotes(task.notes || "")
         setCurrentTab("create")
         window.scrollTo({ top: 0, behavior: "smooth" })
       }
@@ -103,32 +112,53 @@ export default function ManagerDashboard() {
   }, [])
 
   const checkAuth = async () => {
-    try {
-      const user = await getCurrentUser()
-      if (user.role !== "manager") {
-        navigate("/employee")
-        return
+    // Optimization: Check local cache first
+    const cachedUser = getUserProfile();
+    if (cachedUser) {
+      if (cachedUser.role !== "manager") {
+        navigate("/employee");
+        return;
       }
-      setUserName(user.name)
-      setUserRole(user.role || "")
-    } catch (err) {
-      navigate("/")
+      setUserName(cachedUser.name);
+      setUserRole(cachedUser.role || "");
+      // Fetch fresh profile in background to keep it synced
+      getCurrentUser().then(setUserProfile).catch(() => {});
+    } else {
+      try {
+        const user = await getCurrentUser()
+        if (user.role !== "manager") {
+          navigate("/employee")
+          return
+        }
+        setUserName(user.name)
+        setUserRole(user.role || "")
+        setUserProfile(user);
+      } catch (err) {
+        navigate("/")
+      }
     }
   }
 
   const refreshData = async (showLoading = true) => {
-    if (showLoading) setLoading(true)
+    if (showLoading && !tasks.length) setLoading(true)
     try {
       const [tasksData, historyData] = await Promise.all([
         getAllTasks(),
         getTaskHistory()
       ])
-      setTasks(tasksData.tasks || [])
-      setHistory(historyData.history || [])
+      const freshTasks = tasksData.tasks || [];
+      const freshHistory = historyData.history || [];
+      
+      setTasks(freshTasks)
+      setHistory(freshHistory)
+      
+      // Persist to local storage for next session
+      localStorage.setItem('manager_tasks', JSON.stringify(freshTasks));
+      localStorage.setItem('manager_history', JSON.stringify(freshHistory));
     } catch (err) {
       console.error("Error refreshing data:", err)
     } finally {
-      if (showLoading) setLoading(false)
+      setLoading(false)
     }
   }
 
@@ -139,7 +169,9 @@ export default function ManagerDashboard() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees()
-      setEmployees(data.employees || [])
+      const freshEmps = data.employees || [];
+      setEmployees(freshEmps)
+      localStorage.setItem('manager_employees', JSON.stringify(freshEmps));
     } catch (err) {
       console.error("Error fetching employees:", err)
     }
@@ -153,11 +185,13 @@ export default function ManagerDashboard() {
     const title = newTaskTitle.trim() || (newTaskDescription ? newTaskDescription.substring(0, 20) + "..." : "Task");
     
     try {
-      await createTask(title, newTaskDescription, newTaskAssignedTo)
+      await createTask(title, newTaskDescription, newTaskAssignedTo, newTaskPriority, newTaskNotes)
       toast.success("Task created successfully!")
       setNewTaskTitle("")
       setNewTaskDescription("")
       setNewTaskAssignedTo("")
+      setNewTaskPriority("P3")
+      setNewTaskNotes("")
       setShowAddForm(false)
       fetchHistory()
       refreshData(false)
@@ -175,11 +209,13 @@ export default function ManagerDashboard() {
     const title = newTaskTitle.trim() || (newTaskDescription ? newTaskDescription.substring(0, 20) + "..." : "Task");
     
     try {
-      await updateTask(editingTask.id, title, newTaskDescription, newTaskAssignedTo)
+      await updateTask(editingTask.id, title, newTaskDescription, newTaskAssignedTo, editingTask.status, newTaskPriority, newTaskNotes)
       toast.success("Task updated successfully!")
       setNewTaskTitle("")
       setNewTaskDescription("")
       setNewTaskAssignedTo("")
+      setNewTaskPriority("P3")
+      setNewTaskNotes("")
       setEditingTask(null)
       setShowAddForm(false)
       fetchHistory()
@@ -280,13 +316,15 @@ export default function ManagerDashboard() {
   }))
 
   const getFilteredHistory = () => {
-    let filtered = history
+    let filtered = tasks
     
     // Apply employee filter
     if (selectedEmployee !== "all") {
-      filtered = filtered.filter((h) => h.profile?.id === selectedEmployee)
+      filtered = filtered.filter((t) => t.assigned_to === selectedEmployee)
     }
     
+    // Sort tasks so newest are at the top
+    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     return filtered
   }
 
@@ -343,7 +381,6 @@ export default function ManagerDashboard() {
                         <button
                           onClick={() => {
                             setShowHistory(true)
-                            fetchHistory()
                             setSelectedEmployee("all")
                           }}
                           className={`px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 ${
@@ -377,7 +414,7 @@ export default function ManagerDashboard() {
                         <div>
 
                           {getFilteredHistory().length === 0 ? (
-                            <EmptyState title="No completed tasks" description="Tasks completed by employees will appear here" />
+                            <EmptyState title="No tasks" description="All tasks will appear here" />
                           ) : (
                             <TaskTable 
                               tasks={getFilteredHistory()} 
@@ -439,7 +476,7 @@ export default function ManagerDashboard() {
                           </div>
                         ) : showAddForm ? (
                           <div ref={formRef} className="bg-slate-800/80 rounded-lg p-6 border border-slate-700">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                               {/* Title field removed from UI as requested */}
                               <input
                                 type="text"
@@ -460,6 +497,23 @@ export default function ManagerDashboard() {
                                   </option>
                                 ))}
                               </select>
+                              <select
+                                value={newTaskPriority}
+                                onChange={(e) => setNewTaskPriority(e.target.value)}
+                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+                              >
+                                <option value="P1">P1 (Critical)</option>
+                                <option value="P2">P2 (High)</option>
+                                <option value="P3">P3 (Medium)</option>
+                                <option value="P4">P4 (Low)</option>
+                              </select>
+                              <input
+                                type="text"
+                                placeholder="Notes"
+                                value={newTaskNotes}
+                                onChange={(e) => setNewTaskNotes(e.target.value)}
+                                className="px-5 py-3 border border-slate-600 bg-slate-900 text-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base placeholder-slate-500"
+                              />
                             </div>
                             <div className="flex justify-end gap-3 mt-4">
                               <button
@@ -468,6 +522,8 @@ export default function ManagerDashboard() {
                                   setNewTaskTitle("")
                                   setNewTaskDescription("")
                                   setNewTaskAssignedTo("")
+                                  setNewTaskPriority("P3")
+                                  setNewTaskNotes("")
                                   setEditingTask(null)
                                 }}
                                 className="px-6 py-3 bg-slate-700 text-slate-200 rounded-xl hover:bg-slate-600 transition-colors font-semibold text-base"

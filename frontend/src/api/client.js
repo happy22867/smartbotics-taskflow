@@ -14,6 +14,16 @@ export const getAuthToken = () => {
 export const clearAuthToken = () => {
   authToken = null;
   localStorage.removeItem("authToken");
+  localStorage.removeItem("userProfile");
+};
+
+export const setUserProfile = (user) => {
+  localStorage.setItem("userProfile", JSON.stringify(user));
+};
+
+export const getUserProfile = () => {
+  const profile = localStorage.getItem("userProfile");
+  return profile ? JSON.parse(profile) : null;
 };
 
 const getHeaders = () => {
@@ -57,6 +67,9 @@ export const loginUser = async (email, password) => {
   if (data.session?.access_token) {
     setAuthToken(data.session.access_token);
   }
+  if (data.user) {
+    setUserProfile(data.user);
+  }
   return data;
 };
 
@@ -90,7 +103,7 @@ export const getCurrentUser = async () => {
 };
 
 // Task APIs
-export const createTask = async (title, description, assignedTo) => {
+export const createTask = async (title, description, assignedTo, priority, notes) => {
   const response = await fetch(`${API_BASE_URL}/tasks/create`, {
     method: "POST",
     headers: getHeaders(),
@@ -98,6 +111,8 @@ export const createTask = async (title, description, assignedTo) => {
       title,
       description,
       assigned_to: assignedTo || null,
+      priority: priority || "P3",
+      notes: notes || "",
     }),
   });
 
@@ -152,7 +167,7 @@ export const completeTask = async (taskId) => {
   return response.json();
 };
 
-export const updateTask = async (taskId, title, description, assignedTo, status) => {
+export const updateTask = async (taskId, title, description, assignedTo, status, priority, notes) => {
   const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
     method: "PATCH",
     headers: getHeaders(),
@@ -161,6 +176,8 @@ export const updateTask = async (taskId, title, description, assignedTo, status)
       description,
       assigned_to: assignedTo || null,
       status,
+      priority,
+      notes,
     }),
   });
 

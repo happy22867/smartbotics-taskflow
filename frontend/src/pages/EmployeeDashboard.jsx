@@ -4,24 +4,24 @@ import Navbar from "../components/Navbar"
 import StatusBadge from "../components/StatusBadge"
 import EmptyState from "../components/EmptyState"
 import TaskTable from "../components/TaskTable"
-import { getMyTasks, getAllTasks, getTaskHistory, getCurrentUser, clearAuthToken, completeTask, getEmployees } from "../api/client"
+import { getMyTasks, getAllTasks, getTaskHistory, getCurrentUser, clearAuthToken, completeTask, getEmployees, getUserProfile, setUserProfile } from "../api/client"
 import toast from "react-hot-toast"
 
 export default function EmployeeDashboard() {
-  const [myTasks, setMyTasks] = useState([])
-  const [allTasks, setAllTasks] = useState([])
+  const [myTasks, setMyTasks] = useState(() => JSON.parse(localStorage.getItem('employee_my_tasks')) || [])
+  const [allTasks, setAllTasks] = useState(() => JSON.parse(localStorage.getItem('employee_all_tasks')) || [])
   const [filteredTasks, setFilteredTasks] = useState([])
   const [userName, setUserName] = useState("")
   const [userRole, setUserRole] = useState("")
   const [userId, setUserId] = useState("")
   const [filter, setFilter] = useState("my-pending")
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !localStorage.getItem('employee_my_tasks'))
   const [view, setView] = useState("my-tasks")
   const [showHistory, setShowHistory] = useState(false)
-  const [history, setHistory] = useState([])
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('employee_history')) || [])
   const [statsView, setStatsView] = useState("today")
   const [selectedEmployee, setSelectedEmployee] = useState("all")
-  const [employees, setEmployees] = useState([])
+  const [employees, setEmployees] = useState(() => JSON.parse(localStorage.getItem('employee_profiles')) || [])
   const [employeeNames, setEmployeeNames] = useState({})
   const navigate = useNavigate()
 
@@ -40,23 +40,39 @@ export default function EmployeeDashboard() {
   }, [myTasks, allTasks, filter, view, selectedEmployee])
 
   const checkAuth = async () => {
-    try {
-      const user = await getCurrentUser()
-      if (user.role !== "employee") {
-        navigate("/manager")
-        return
+    // Optimization: Check local cache first
+    const cachedUser = getUserProfile();
+    if (cachedUser) {
+      if (cachedUser.role !== "employee") {
+        navigate("/manager");
+        return;
       }
-      setUserName(user.name)
-      setUserRole(user.role || "")
-      setUserId(user.id)
-      fetchTasks(user.id)
-    } catch (err) {
-      navigate("/")
+      setUserName(cachedUser.name);
+      setUserRole(cachedUser.role || "");
+      setUserId(cachedUser.id);
+      fetchTasks(cachedUser.id);
+      // Fetch fresh profile in background to keep it synced
+      getCurrentUser().then(setUserProfile).catch(() => {});
+    } else {
+      try {
+        const user = await getCurrentUser()
+        if (user.role !== "employee") {
+          navigate("/manager")
+          return
+        }
+        setUserName(user.name)
+        setUserRole(user.role || "")
+        setUserId(user.id)
+        setUserProfile(user);
+        fetchTasks(user.id)
+      } catch (err) {
+        navigate("/")
+      }
     }
   }
 
   const refreshData = async (showLoading = true) => {
-    if (showLoading) setLoading(true)
+    if (showLoading && !myTasks.length) setLoading(true)
     try {
       const [myTasksData, allTasksData, historyData] = await Promise.all([
         getMyTasks(),
@@ -64,15 +80,24 @@ export default function EmployeeDashboard() {
         getTaskHistory()
       ])
 
-      setMyTasks(myTasksData.tasks || [])
-      setAllTasks(allTasksData.tasks || [])
+      const freshMyTasks = myTasksData.tasks || []
+      const freshAllTasks = allTasksData.tasks || []
+      const freshHistory = historyData.history || []
       
-      const userHistory = (historyData.history || []).filter(h => h.profile?.id === userId)
+      setMyTasks(freshMyTasks)
+      setAllTasks(freshAllTasks)
+      
+      const userHistory = freshHistory.filter(h => h.profile?.id === userId)
       setHistory(userHistory)
+
+      // Persist for instant load next time
+      localStorage.setItem('employee_my_tasks', JSON.stringify(freshMyTasks))
+      localStorage.setItem('employee_all_tasks', JSON.stringify(freshAllTasks))
+      localStorage.setItem('employee_history', JSON.stringify(freshHistory))
     } catch (err) {
       console.error("Error refreshing data:", err)
     } finally {
-      if (showLoading) setLoading(false)
+      setLoading(false)
     }
   }
 
@@ -83,7 +108,9 @@ export default function EmployeeDashboard() {
   const fetchEmployees = async () => {
     try {
       const data = await getEmployees()
-      setEmployees(data.employees || [])
+      const freshEmps = data.employees || []
+      setEmployees(freshEmps)
+      localStorage.setItem('employee_profiles', JSON.stringify(freshEmps))
       
       // Create employee names mapping
       const names = {}
@@ -290,12 +317,11 @@ export default function EmployeeDashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      setFilter("my-completed")
+                      setFilter("my-history")
                       setShowHistory(true)
-                      fetchHistory()
                     }}
                     className={`px-5 py-2.5 rounded-lg text-base font-bold transition-all duration-300 ${
-                      filter === "my-completed" && showHistory
+                      filter === "my-history" && showHistory
                         ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md shadow-indigo-500/30"
                         : "text-slate-400 hover:bg-slate-700 hover:text-slate-200"
                     }`}
@@ -356,13 +382,13 @@ export default function EmployeeDashboard() {
             )}
 
             <div className="p-8">
-              {view === "my-tasks" && filter === "my-completed" && showHistory ? (
-                history.length === 0 ? (
-                  <EmptyState title="No completed tasks" description="Tasks you complete will appear here" />
+              {view === "my-tasks" && filter === "my-history" && showHistory ? (
+                myTasks.length === 0 ? (
+                  <EmptyState title="No tasks" description="Your tasks will appear here" />
                 ) : (
                   <TaskTable 
-                    tasks={history} 
-                    employeeNames={{}}
+                    tasks={myTasks} 
+                    employeeNames={employeeNames}
                     showActions={false}
                     isHistory={true}
                     showEmployeeColumn={false}

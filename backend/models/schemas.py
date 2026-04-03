@@ -25,12 +25,16 @@ class TaskCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     assigned_to: Optional[str] = None
+    priority: Optional[str] = "P3"
+    notes: Optional[str] = ""
 
 class TaskUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     assigned_to: Optional[str] = None
     status: Optional[str] = None
+    priority: Optional[str] = None
+    notes: Optional[str] = None
 
 class TaskCompleteRequest(BaseModel):
     status: str = "completed"
@@ -47,5 +51,7 @@ class TaskResponse(BaseModel):
     description: Optional[str]
     status: str
     assigned_to: Optional[str]
+    priority: Optional[str]
+    notes: Optional[str]
     created_by: str
     created_at: str

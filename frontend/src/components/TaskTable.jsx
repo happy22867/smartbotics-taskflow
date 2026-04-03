@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FaTrash, FaCheckCircle } from 'react-icons/fa'
+import { FaTrash, FaCheckCircle, FaEdit } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import StatusBadge from "./StatusBadge"
 
@@ -12,6 +12,8 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
   const [editTitle, setEditTitle] = useState("")
   const [editDescription, setEditDescription] = useState("")
   const [editAssignedTo, setEditAssignedTo] = useState("")
+  const [editPriority, setEditPriority] = useState("")
+  const [editNotes, setEditNotes] = useState("")
   
   // Status change specific state
   const [statusMenuTaskId, setStatusMenuTaskId] = useState(null)
@@ -37,6 +39,8 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
     setEditTitle(taskData?.title || "")
     setEditDescription(taskData?.description || "")
     setEditAssignedTo(taskData?.assigned_to || "")
+    setEditPriority(taskData?.priority || "P3")
+    setEditNotes(taskData?.notes || "")
   }
 
   const cancelEditing = () => {
@@ -51,7 +55,9 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
         title: editTitle,
         description: editDescription,
         assigned_to: editAssignedTo,
-        status: taskData?.status || "pending"
+        status: taskData?.status || "pending",
+        priority: editPriority,
+        notes: editNotes
       }, true) // Pass true to indicate it's an inline update
     }
     setEditingTaskId(null)
@@ -119,6 +125,16 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text
   }
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'P1': return 'bg-red-500/20 text-red-400 border-red-500/50'
+      case 'P2': return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+      case 'P3': return 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+      case 'P4': return 'bg-slate-500/20 text-slate-400 border-slate-500/50'
+      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/50'
+    }
+  }
+
   if (tasks.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400 bg-slate-800/50 rounded-xl border border-slate-700 border-dashed m-4">
@@ -134,27 +150,29 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
           <tr className="border-b border-slate-700 bg-slate-800">
             {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Title</th> */}
             <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Description</th>
-            {showEmployeeColumn && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">User</th>}
-            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Date</th> */}
-            {/* <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Time</th> */}
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Priority</th>
+            {showEmployeeColumn && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Owner</th>}
+            <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Notes</th>
+            {isHistory && (
+              <>
+                <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Created At</th>
+                <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs whitespace-nowrap">Completed At</th>
+              </>
+            )}
             <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Status</th>
             {showActions && <th className="text-left px-6 py-4 text-base font-bold text-slate-200 uppercase tracking-wider text-xs">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {tasks.map((task) => {
-            const taskData = isHistory ? task.task : task
-            const userData = isHistory ? task.profile : null
-            const userName = isHistory 
+            const isHistoricalRecord = isHistory && task.task !== undefined
+            const taskData = isHistoricalRecord ? task.task : task
+            const userData = isHistoricalRecord ? task.profile : null
+            const userName = isHistoricalRecord 
               ? userData?.name || "Unknown"
               : task.assigned_to 
                 ? employeeNames[task.assigned_to] || "Loading..." 
                 : "Unassigned"
-            
-            // Time logic: Show creation/update time for pending tasks, completion/update time for completed tasks
-            const dateToShow = isHistory 
-              ? task.completed_at 
-              : (taskData?.updated_at || task.updated_at || taskData?.completed_at || task.completed_at || taskData?.created_at || task.created_at)
             
             return (
               <tr key={task.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors">
@@ -201,6 +219,24 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     </div>
                   )}
                 </td>
+                <td className="px-6 py-4">
+                  {editingTaskId === task.id ? (
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value)}
+                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                    >
+                      <option value="P1">P1</option>
+                      <option value="P2">P2</option>
+                      <option value="P3">P3</option>
+                      <option value="P4">P4</option>
+                    </select>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityColor(taskData?.priority || 'P3')}`}>
+                      {taskData?.priority || 'P3'}
+                    </span>
+                  )}
+                </td>
                 {showEmployeeColumn && (
                   <td className="px-6 py-4">
                     {editingTaskId === task.id ? (
@@ -221,19 +257,40 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                     )}
                   </td>
                 )}
-                {/* <td className="px-6 py-4">
-                  <div className="text-base text-slate-300 font-medium">
-                    {formatDate(dateToShow)}
-                  </div>
-                </td>
                 <td className="px-6 py-4">
-                  <div className="text-base text-slate-300 font-medium">
-                    {formatTime(dateToShow)}
-                  </div>
-                </td> */}
+                  {editingTaskId === task.id ? (
+                    <input 
+                      type="text" 
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      className="w-full px-3 py-2 text-base border border-slate-600 bg-slate-900 text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-12 shadow-sm"
+                      placeholder="Notes"
+                    />
+                  ) : (
+                    <div className="text-base text-slate-400 font-medium italic">
+                      {taskData?.notes || "-"}
+                    </div>
+                  )}
+                </td>
+                {isHistory && (
+                  <>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                        {formatDate(taskData?.created_at)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                        {taskData?.status?.toLowerCase() === 'completed'
+                          ? formatDate(taskData?.completed_at || (isHistoricalRecord ? task.completed_at : null) || taskData?.updated_at)
+                          : '-'}
+                      </div>
+                    </td>
+                  </>
+                )}
                 <td className="px-6 py-4 relative">
                   <StatusBadge 
-                    status={isHistory ? "completed" : taskData?.status} 
+                    status={taskData?.status} 
                     canChange={!isEmployeeView && !isHistory && (taskData?.status?.toLowerCase() === 'pending' || taskData?.status?.toLowerCase() === 'new')}
                     onClick={() => {
                       console.log("Opening status menu for task:", task.id)
@@ -312,20 +369,22 @@ export default function TaskTable({ tasks, onEdit, onDelete, onMarkComplete, emp
                             <button
                               onClick={() => startEditing(task)}
                               disabled={taskData?.status?.toLowerCase() === 'completed'}
-                              className={`text-base font-bold px-4 py-2 rounded-lg transition-colors ${
+                              className={`text-base font-bold px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
                                 (taskData?.status?.toLowerCase() === 'completed' || task.status?.toLowerCase() === 'completed') 
                                   ? 'text-slate-500 cursor-not-allowed bg-slate-800 border-transparent' 
                                   : 'text-indigo-300 bg-slate-700 hover:bg-slate-600 border border-slate-600 shadow-sm'
                               }`}
+                              title="Edit"
                             >
-                              Edit
+                              <FaEdit className="text-lg" />
                             </button>
                           )}
                           <button
                             onClick={() => handleDelete(task)}
-                            className="text-red-400 hover:text-red-300 text-base font-bold px-4 py-2 rounded-lg hover:bg-slate-600 bg-slate-700 border border-slate-600 transition-colors shadow-sm ml-1"
+                            className="text-red-400 hover:text-red-300 text-base font-bold px-4 py-2 rounded-lg hover:bg-slate-600 bg-slate-700 border border-slate-600 transition-colors shadow-sm ml-1 flex items-center justify-center"
+                            title="Delete"
                           >
-                            Delete
+                            <FaTrash className="text-lg" />
                           </button>
                         </>
                       )}
